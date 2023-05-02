@@ -8,7 +8,7 @@ if __name__ == '__main__':
     window = pygame.display.set_mode((320, 240))
     window.fill((0, 0, 0))
     running = True
-    static_noise = music.load('./sounds/Gray_noise.ogg')
+    static_noise = music.load('./sounds/gray_noise.ogg')
     button_on = Sound('./sounds/button_on.wav')
     button_off = Sound('./sounds/button_off.wav')
     music.play(loops=-1)
