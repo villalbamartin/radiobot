@@ -2,8 +2,29 @@
 import os
 import pygame
 import tempfile
+import time
 from ovos_tts_plugin_mimic3 import Mimic3TTSPlugin
 from pygame.mixer import music, Sound
+
+
+def say(text, mimic, voice_file):
+    """ Synthesises a text as speech and plays it.
+
+    Parameters
+    ----------
+    text : str
+        Speech that will be read out loud.
+    mimic : Mimic3TTSPlugin
+        Pre-configured MIMIC-3 plugin
+    voice_file : str
+        Path to a temporary file that will be overwritten with a WAV file
+        containing the desired speech.
+    """
+    mimic.get_tts(text, voice_file)
+    speech = Sound(voice_file)
+    Sound.play(speech)
+    # We wait until the speech is done
+    time.sleep(speech.get_length())
 
 
 if __name__ == '__main__':
@@ -17,16 +38,15 @@ if __name__ == '__main__':
     # Start playing static sound
     music.play(loops=-1)
     music.set_volume(0.5)
-    # Play a test voice
+    # Voice configuration, including temporary file and MIMIC config
     cfg = {"voice": "en_US/hifi-tts_low", "speaker": "92"}
     mimic = Mimic3TTSPlugin(config=cfg)
     voice_file = tempfile.NamedTemporaryFile(delete=False)
     voice_file.close()
-    print(voice_file.name)
-    mimic.get_tts("hello world", voice_file.name)
 
     # Start of main loop
     running = True
+    press_start = 0
     while running:
         for e in pygame.event.get():
             if e.type == pygame.KEYDOWN:
@@ -34,11 +54,18 @@ if __name__ == '__main__':
                     # Space key down
                     music.set_volume(0.025)
                     Sound.play(button_on)
+                    press_start = time.time()
             elif e.type == pygame.KEYUP:
                 if e.key == pygame.K_SPACE:
                     # Space key up
                     music.set_volume(0.5)
                     Sound.play(button_off)
+                    # Test: wait a second and say something predefined
+                    time.sleep(1)
+                    music.set_volume(0.025)
+                    say("You've pressed the button for {} seconds".format(
+                        int(time.time()-press_start)), mimic, voice_file.name)
+                    music.set_volume(0.5)
                 elif e.key == pygame.K_ESCAPE:
                     # Escape key - quit
                     running = False
