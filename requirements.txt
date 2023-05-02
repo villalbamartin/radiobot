@@ -1,1 +1,5 @@
+mycroft-messagebus-client==0.10.1
+mycroft-mimic3-tts==0.2.4
+ovos_plugin_manager==0.0.22
+ovos-tts-plugin-mimic3==0.0.0
 pygame==2.4.0
