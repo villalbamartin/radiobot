@@ -3,6 +3,7 @@ import os
 import pygame
 import tempfile
 import time
+from multiprocessing import Pipe
 from ovos_tts_plugin_mimic3 import Mimic3TTSPlugin
 from pygame.mixer import music, Sound
 
@@ -43,35 +44,54 @@ if __name__ == '__main__':
     mimic = Mimic3TTSPlugin(config=cfg)
     voice_file = tempfile.NamedTemporaryFile(delete=False)
     voice_file.close()
+    # Start the Speech-to-Text server
+    speech_to_text_pipe = Pipe()
+    pid = os.fork()
+    if pid == 0:
+        # Speech-to-text server
+        import speech_to_text
+        speech_to_text.run_speech_server(speech_to_text_pipe[1])
+    else:
+        speech_to_text_pipe = speech_to_text_pipe[0]
 
-    # Start of main loop
-    running = True
-    press_start = 0
-    while running:
-        for e in pygame.event.get():
-            if e.type == pygame.KEYDOWN:
-                if e.key == pygame.K_SPACE:
-                    # Space key down
-                    music.set_volume(0.025)
-                    Sound.play(button_on)
-                    press_start = time.time()
-            elif e.type == pygame.KEYUP:
-                if e.key == pygame.K_SPACE:
-                    # Space key up
-                    music.set_volume(0.5)
-                    Sound.play(button_off)
-                    # Test: wait a second and say something predefined
-                    time.sleep(1)
-                    music.set_volume(0.025)
-                    say("You've pressed the button for {} seconds".format(
-                        int(time.time()-press_start)), mimic, voice_file.name)
-                    music.set_volume(0.5)
-                elif e.key == pygame.K_ESCAPE:
-                    # Escape key - quit
+        # Start of main loop
+        running = True
+        recording = False
+        while running:
+            for e in pygame.event.get():
+                if e.type == pygame.KEYDOWN:
+                    if e.key == pygame.K_SPACE:
+                        if not recording:
+                            recording = True
+                            # Space key down
+                            music.set_volume(0.025)
+                            Sound.play(button_on)
+                            speech_to_text_pipe.send('start_recording')
+                elif e.type == pygame.KEYUP:
+                    if e.key == pygame.K_SPACE:
+                        if recording:
+                            # Space key up
+                            # Stop recording
+                            print("Done recording...")
+                            recording = False
+                            # Play the correct sounds
+                            music.set_volume(0.5)
+                            Sound.play(button_off)
+                            # Stop the actual recording
+                            speech_to_text_pipe.send('stop_recording')
+                            received_text = speech_to_text_pipe.recv()
+                            # Test: wait a second and say something predefined
+                            music.set_volume(0.025)
+                            say(f"You said: \"{received_text}\"",
+                                mimic, voice_file.name)
+                            music.set_volume(0.5)
+                    elif e.key == pygame.K_ESCAPE:
+                        # Escape key - quit
+                        running = False
+                if e.type == pygame.QUIT:
                     running = False
-            if e.type == pygame.QUIT:
-                running = False
-    # Cleanup
-    music.stop()
-    pygame.quit()
-    os.unlink(voice_file.name)
+        # Cleanup
+        speech_to_text_pipe.send('quit')
+        music.stop()
+        pygame.quit()
+        os.unlink(voice_file.name)
