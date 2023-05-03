@@ -3,6 +3,7 @@ import os
 import pygame
 import tempfile
 import time
+from llama_cpp import Llama
 from multiprocessing import Pipe
 from ovos_tts_plugin_mimic3 import Mimic3TTSPlugin
 from pygame.mixer import music, Sound
@@ -28,22 +29,38 @@ def say(text, mimic, voice_file):
     time.sleep(speech.get_length())
 
 
+def reply(llm, conversation_log):
+    """ Generates an LLM reply for a given conversation.
+
+    Parameters
+    ----------
+    llm : Llama()
+        Language model used to generate the responses
+    conversation_log : list(str)
+        List of utterances in this dialog, switching between the text between
+        the user and the AI. The user always goes first.
+
+    Returns
+    -------
+    str
+        An utterance that the AI generates in response to the given dialog.
+    """
+    if len(conversation_log) % 2 != 1:
+        print("The conversation ends in the wrong turn!")
+    prompt = "This is a log of a conversation between User and AI.\n"
+    user_turn = True
+    for utterance in conversation_log:
+        if user_turn:
+            prompt += f"User: {utterance}\n"
+        else:
+            prompt += f"AI: {utterance}\n"
+        user_turn = not user_turn
+    prompt += "AI: "
+    output = llm(prompt, max_tokens=64, stop=["User:", "AI:", "\n"], echo=True)
+    return output
+
+
 if __name__ == '__main__':
-    # Initialize PyGame, including window and sounds
-    pygame.init()
-    window = pygame.display.set_mode((320, 240))
-    window.fill((0, 0, 0))
-    music.load('./sounds/gray_noise.ogg')
-    button_on = Sound('./sounds/button_on.wav')
-    button_off = Sound('./sounds/button_off.wav')
-    # Start playing static sound
-    music.play(loops=-1)
-    music.set_volume(0.5)
-    # Voice configuration, including temporary file and MIMIC config
-    cfg = {"voice": "en_US/hifi-tts_low", "speaker": "92"}
-    mimic = Mimic3TTSPlugin(config=cfg)
-    voice_file = tempfile.NamedTemporaryFile(delete=False)
-    voice_file.close()
     # Start the Speech-to-Text server
     speech_to_text_pipe = Pipe()
     pid = os.fork()
@@ -52,7 +69,30 @@ if __name__ == '__main__':
         import speech_to_text
         speech_to_text.run_speech_server(speech_to_text_pipe[1])
     else:
+        # Main thread
         speech_to_text_pipe = speech_to_text_pipe[0]
+
+        # Initialize PyGame, including window and sounds
+        pygame.init()
+        window = pygame.display.set_mode((320, 240))
+        window.fill((0, 0, 0))
+        music.load('./sounds/gray_noise.ogg')
+        button_on = Sound('./sounds/button_on.wav')
+        button_off = Sound('./sounds/button_off.wav')
+
+        # Start playing static sound
+        music.play(loops=-1)
+        music.set_volume(0.5)
+
+        # LLaMa model and conversation logs
+        llm = Llama(model_path="/media/external/CORPORA/llama/ggml-alpaca-7b-q4.bin")
+        conversation = ['Good morning!', 'Good morning!']
+
+        # Voice configuration, including temporary file and MIMIC config
+        cfg = {"voice": "en_US/hifi-tts_low", "speaker": "92"}
+        mimic = Mimic3TTSPlugin(config=cfg)
+        voice_file = tempfile.NamedTemporaryFile(delete=False)
+        voice_file.close()
 
         # Start of main loop
         running = True
@@ -80,16 +120,21 @@ if __name__ == '__main__':
                             # Stop the actual recording
                             speech_to_text_pipe.send('stop_recording')
                             received_text = speech_to_text_pipe.recv()
+                            conversation.append(received_text)
                             # Test: wait a second and say something predefined
+                            response = reply(llm, conversation)
                             music.set_volume(0.025)
-                            say(f"You said: \"{received_text}\"",
-                                mimic, voice_file.name)
+                            say(response, mimic, voice_file.name)
                             music.set_volume(0.5)
                     elif e.key == pygame.K_ESCAPE:
                         # Escape key - quit
                         running = False
                 if e.type == pygame.QUIT:
                     running = False
+        # For debugging
+        print("Final chat log")
+        for utterance in conversation:
+            print(f"- {utterance}")
         # Cleanup
         speech_to_text_pipe.send('quit')
         music.stop()

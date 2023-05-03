@@ -1,6 +1,7 @@
+llama-cpp-python==0.1.41
 mycroft-messagebus-client==0.10.1
 mycroft-mimic3-tts==0.2.4
-openai-whisper
+openai-whisper==20230314
 ovos_plugin_manager==0.0.22
 ovos-tts-plugin-mimic3==0.0.0
 sounddevice==0.4.6
