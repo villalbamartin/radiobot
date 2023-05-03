@@ -57,7 +57,11 @@ def reply(llm, conversation_log):
         user_turn = not user_turn
     prompt += "AI: "
     output = llm(prompt, max_tokens=64, stop=["User:", "AI:", "\n"], echo=True)
-    return output
+    new_text = output['choices'][0]['text']
+    new_text = new_text.split('AI: ')[-1].strip()
+    print(new_text)
+    print("Obtained reply: " + new_text)
+    return new_text
 
 
 if __name__ == '__main__':
@@ -74,11 +78,14 @@ if __name__ == '__main__':
 
         # Initialize PyGame, including window and sounds
         pygame.init()
-        window = pygame.display.set_mode((320, 240))
+        window = pygame.display.set_mode((640, 340))
         window.fill((0, 0, 0))
         music.load('./sounds/gray_noise.ogg')
         button_on = Sound('./sounds/button_on.wav')
         button_off = Sound('./sounds/button_off.wav')
+        bg = pygame.image.load("./images/background.jpg")
+        window.blit(bg, (0, 0))
+        pygame.display.update()
 
         # Start playing static sound
         music.play(loops=-1)
@@ -124,6 +131,7 @@ if __name__ == '__main__':
                             # Test: wait a second and say something predefined
                             response = reply(llm, conversation)
                             music.set_volume(0.025)
+                            conversation.append(response)
                             say(response, mimic, voice_file.name)
                             music.set_volume(0.5)
                     elif e.key == pygame.K_ESCAPE:

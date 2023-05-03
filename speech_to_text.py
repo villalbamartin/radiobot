@@ -47,7 +47,7 @@ def run_speech_server(comm_pipe, device=0):
                                 recording = False
                     # Convert the speech to text and return it via pipe
                     result = model.transcribe(filename)
-                    print(result["text"])
-                    comm_pipe.send(result["text"])
+                    print("You said: " + result["text"])
+                    comm_pipe.send(result["text"].strip())
         elif control_msg == 'quit':
             running = False
