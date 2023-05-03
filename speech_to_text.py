@@ -1,12 +1,12 @@
 import os
 import tempfile
 import queue
-import sys
-
 import sounddevice as sd
 import soundfile as sf
 import numpy  # Make sure NumPy is loaded before it is used in the callback
+import whisper
 
+# Queue for the voice recording
 q = queue.Queue()
 
 
@@ -16,12 +16,16 @@ def callback(indata, frames, time, status):
 
 
 def run_speech_server(comm_pipe, device=0):
+    # Parameters for the recording
     device_info = sd.query_devices(device, 'input')
     samplerate = int(device_info['default_samplerate'])
     fd, filename = tempfile.mkstemp(suffix='.wav')
     os.close(fd)
     channels = 1
-
+    # Initialize the speech-to-text system and ensure it only runs on CPU
+    # (the GPU will be needed for the language model)
+    os.environ['CUDA_VISIBLE_DEVICES'] = ""
+    model = whisper.load_model("base")
     running = True
     while running:
         control_msg = comm_pipe.recv()
@@ -41,9 +45,9 @@ def run_speech_server(comm_pipe, device=0):
                             control_msg = comm_pipe.recv()
                             if control_msg == 'stop_recording':
                                 recording = False
-                    # TO-DO: make some actual TTS here
-                    text = "Hi there"
-                    # Return the recognized text
-                    comm_pipe.send(text)
+                    # Convert the speech to text and return it via pipe
+                    result = model.transcribe(filename)
+                    print(result["text"])
+                    comm_pipe.send(result["text"])
         elif control_msg == 'quit':
             running = False
