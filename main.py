@@ -29,7 +29,7 @@ def say(text, mimic, voice_file):
     time.sleep(speech.get_length())
 
 
-def reply(llm, conversation_log):
+def reply(llm, conversation_log, context_turns=5):
     """ Generates an LLM reply for a given conversation.
 
     Parameters
@@ -39,17 +39,22 @@ def reply(llm, conversation_log):
     conversation_log : list(str)
         List of utterances in this dialog, switching between the text between
         the user and the AI. The user always goes first.
+    context_turns : int
+        How many turns to use in the prompt for context. One turn consists of
+        one utterance for the User and one for the AI.
 
     Returns
     -------
     str
         An utterance that the AI generates in response to the given dialog.
     """
+    start = time.time()
     if len(conversation_log) % 2 != 1:
         print("The conversation ends in the wrong turn!")
     prompt = "This is a log of a conversation between User and AI.\n"
     user_turn = True
-    for utterance in conversation_log:
+    subset = 1+2*context_turns
+    for utterance in conversation_log[-subset:]:
         if user_turn:
             prompt += f"User: {utterance}\n"
         else:
@@ -60,7 +65,7 @@ def reply(llm, conversation_log):
     new_text = output['choices'][0]['text']
     new_text = new_text.split('AI: ')[-1].strip()
     print(new_text)
-    print("Obtained reply: " + new_text)
+    print("({:.3f}s) Obtained reply: {}".format(time.time()-start, new_text))
     return new_text
 
 
@@ -94,7 +99,6 @@ if __name__ == '__main__':
         # LLaMa model and conversation logs
         llm = Llama(model_path="/media/external/CORPORA/llama/ggml-alpaca-7b-q4.bin")
         conversation = ['Good morning!', 'Good morning!']
-
         # Voice configuration, including temporary file and MIMIC config
         cfg = {"voice": "en_US/hifi-tts_low", "speaker": "92"}
         mimic = Mimic3TTSPlugin(config=cfg)
