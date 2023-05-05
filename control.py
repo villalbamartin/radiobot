@@ -109,7 +109,6 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
 
         # Bug: many keypresses are getting lost.
 
-
         if state == 'idle_dialog':
             if 'press_space' in events:
                 # Start recording
@@ -120,7 +119,7 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
             elif 'release_r' in events:
                 # Change from dialog to radio mode
                 state = 'idle_radio'
-                conversation = ['And now, the news.']
+                conversation = ['And now, the news. Our top story tonight: a woman was gifted a cute puppy.']
                 music.set_volume(0.5)
                 # TODO: Animation and sound
             elif 'release_f' in events:
@@ -170,6 +169,13 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
                                 'Thanks. Good morning to you too!']
                 music.set_volume(0.5)
                 state = 'idle_dialog'
+            elif 'release_f' in events:
+                # Switch screen mode
+                pygame.display.toggle_fullscreen()
+                window.fill((0, 0, 0))
+                window.blit(bg, ((width - bg_w) / 2, (height - bg_h) / 2))
+                pygame.display.flip()
+                pygame.display.update()
             else:
                 # I'm not doing anything, so let's generate
                 response_prompt = nlp_utils.broadcast_prompt(
@@ -179,13 +185,6 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
                 pipe_llm.send(response_prompt)
                 # TODO: Animation and sound
                 state = 'thinking_radio'
-            elif 'release_f' in events:
-                # Switch screen mode
-                pygame.display.toggle_fullscreen()
-                window.fill((0, 0, 0))
-                window.blit(bg, ((width - bg_w) / 2, (height - bg_h) / 2))
-                pygame.display.flip()
-                pygame.display.update()
         elif state == 'thinking_radio':
             if 'llm_uttered' in events:
                 # The LLM is done thinking and it is time to talk
@@ -224,7 +223,7 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
         print(f"- {utterance}")
 
 
-def run_main_loop(pipe_llm, pipe_speech_to_text, screen, json_config):
+def run_main_loop(pipe_llm, pipe_speech_to_text, json_config):
     # Initialize PyGame music and sounds
     music.load('./sounds/gray_noise.ogg')
     button_on = Sound('./sounds/button_on.wav')
@@ -243,7 +242,7 @@ def run_main_loop(pipe_llm, pipe_speech_to_text, screen, json_config):
     # you are using the GUI or not. We split the code here because
     # the code for processing inputs is different in each case,
     # and better to have two functions that lots of nested ifs.
-    if screen is not None:
+    if True:
         _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
                            button_on, button_off, mimic, voice_file.name)
     else:

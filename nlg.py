@@ -23,10 +23,13 @@ def run_nlg_server(llm_path, comm_pipe, username="User"):
         if prompt == 'quit':
             running = False
         else:
+            print(prompt)
             output = llm(prompt, max_tokens=64,
                          stop=[f"{username}:", "I: ", "\n"],
                          echo=True)
             new_text = output['choices'][0]['text']
+            if new_text.rfind('.') > 0:
+                new_text = new_text[:new_text.rfind('.')] + "."
             new_text = new_text.split('I: ')[-1].strip()
+            print(f"About to say: {new_text}")
             comm_pipe.send(new_text)
-

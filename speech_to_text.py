@@ -1,3 +1,4 @@
+import logging
 import os
 import tempfile
 import queue
@@ -15,10 +16,36 @@ def callback(indata, frames, time, status):
     q.put(indata.copy())
 
 
-def run_speech_server(comm_pipe, device=0):
+def setup_mic():
+    """ Routine for setting up the microphone automatically.
+    """
+    device = None
+    # Use the first available device
+    input_devices = sd.query_devices(kind='input')
+    if isinstance(input_devices, dict):
+        device = input_devices['index']
+        logging.debug('Using input device {}: {}'.format(
+                      input_devices['index'],
+                      input_devices['name']))
+    elif isinstance(input_devices, list):
+            print("Multiple devices found")
+            for dev in input_devices:
+                print("Device {}: {}".format(dev['index'], dev['name']))
+                if device is None:
+                    device = dev['index']
+            print('Using first input device {}: {}'.format(
+                   input_devices[0]['index'],
+                   input_devices[0]['name']))
+    else:
+        print('No input device found')
+        device = -1
+    return device
+
+
+def run_speech_server(comm_pipe, device=None):
     # Parameters for the recording
-    devs = sd.query_devices(kind='input')
-    device = devs['index']
+    if device is None:
+        device = setup_mic()
     device_info = sd.query_devices(device, 'input')
     samplerate = int(device_info['default_samplerate'])
     fd, filename = tempfile.mkstemp(suffix='.wav')

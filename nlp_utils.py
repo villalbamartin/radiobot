@@ -23,7 +23,7 @@ def build_reply_prompt(initial_prompt, conversation_log, context_turns=5, userna
     """
     assert len(conversation_log) % 2 == 1, \
         "The conversation should start and end with the user"
-    prompt = initial_prompt.format(username=username)
+    prompt = initial_prompt.format(username=username) + "\n"
     user_turn = True
     subset = 1+2*context_turns
     for utterance in conversation_log[-subset:]:
@@ -61,8 +61,8 @@ def broadcast_prompt(initial_prompt, speech_log, context_turns=10, username="Use
         An utterance that the AI generates in response to the given speech
         history.
     """
-    prompt = initial_prompt.format(username=username)
+    prompt = initial_prompt.format(username=username) + "\n"
     for utterance in speech_log[-context_turns:]:
-        prompt += "I: {utterance}\n"
+        prompt += f"I: {utterance}\n"
     prompt += "I: "
     return prompt
