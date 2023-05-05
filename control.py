@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import logging
 import nlp_utils
 import os
 import pygame
@@ -75,6 +76,7 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
     running = True
     while running:
         assert state in all_states, f'Invalid state {state}'
+        old_state = state
         # First, collect all possible events.
         # Let's start with all types of key presses.
         for e in pygame.event.get():
@@ -170,9 +172,10 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
             else:
                 # I'm not doing anything, so let's generate
                 response_prompt = nlp_utils.broadcast_prompt(
-                                       json_config['monologue_prompt'],
-                                       conversation,
-                                       username=json_config['username'])
+                    json_config['monologue_prompt'],
+                    conversation,
+                    context_turns=5,
+                    username=json_config['username'])
                 pipe_llm.send(response_prompt)
                 # TODO: Animation and sound
                 state = 'thinking_radio'
@@ -207,7 +210,8 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
                 state = 'thinking_radio'
         # Is this correct?
         events = []
-
+        if state != old_state:
+            logging.debug(f"{old_state} -> {state}")
     # For debugging
     print("Final chat log")
     for utterance in conversation:
