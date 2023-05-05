@@ -29,7 +29,7 @@ def say(text, mimic, voice_file):
     time.sleep(speech.get_length())
 
 
-def reply(llm, conversation_log, context_turns=5):
+def reply(llm, conversation_log, context_turns=5, other_name="User"):
     """ Generates an LLM reply for a given conversation.
 
     Parameters
@@ -51,19 +51,20 @@ def reply(llm, conversation_log, context_turns=5):
     start = time.time()
     if len(conversation_log) % 2 != 1:
         print("The conversation ends in the wrong turn!")
-    prompt = "This is a log of a conversation between User and AI.\n"
+    prompt = f"This is a log of a conversation between {other_name} and I.\n"
     user_turn = True
     subset = 1+2*context_turns
     for utterance in conversation_log[-subset:]:
         if user_turn:
-            prompt += f"User: {utterance}\n"
+            prompt += f"{other_name}: {utterance}\n"
         else:
-            prompt += f"AI: {utterance}\n"
+            prompt += f"I: {utterance}\n"
         user_turn = not user_turn
-    prompt += "AI: "
-    output = llm(prompt, max_tokens=64, stop=["User:", "AI:", "\n"], echo=True)
+    prompt += "I: "
+    print(prompt)
+    output = llm(prompt, max_tokens=64, stop=[f"{other_name}:", "I:", "\n"], echo=True)
     new_text = output['choices'][0]['text']
-    new_text = new_text.split('AI: ')[-1].strip()
+    new_text = new_text.split('I: ')[-1].strip()
     print(new_text)
     print("({:.3f}s) Obtained reply: {}".format(time.time()-start, new_text))
     return new_text
@@ -83,13 +84,16 @@ if __name__ == '__main__':
 
         # Initialize PyGame, including window and sounds
         pygame.init()
-        window = pygame.display.set_mode((640, 340))
+        width = 800
+        height = 425
+        window = pygame.display.set_mode((width, height))
         window.fill((0, 0, 0))
         music.load('./sounds/gray_noise.ogg')
         button_on = Sound('./sounds/button_on.wav')
         button_off = Sound('./sounds/button_off.wav')
         bg = pygame.image.load("./images/background.jpg")
-        window.blit(bg, (0, 0))
+        bg_w, bg_h = bg.get_size()
+        window.blit(bg, ((width-bg_w)/2, (height-bg_h)/2))
         pygame.display.update()
 
         # Start playing static sound
@@ -98,9 +102,9 @@ if __name__ == '__main__':
 
         # LLaMa model and conversation logs
         llm = Llama(model_path="/media/external/CORPORA/llama/ggml-alpaca-7b-q4.bin")
-        conversation = ['Good morning!', 'Good morning!']
+        conversation = ['Good morning! Nice to see you.', 'Thanks. Good morning to you too!']
         # Voice configuration, including temporary file and MIMIC config
-        cfg = {"voice": "en_US/hifi-tts_low", "speaker": "92"}
+        cfg = {"voice": "en_US/hifi-tts_low", "speaker": "92", "length_scale": 1.2}
         mimic = Mimic3TTSPlugin(config=cfg)
         voice_file = tempfile.NamedTemporaryFile(delete=False)
         voice_file.close()
@@ -141,7 +145,13 @@ if __name__ == '__main__':
                     elif e.key == pygame.K_ESCAPE:
                         # Escape key - quit
                         running = False
-                if e.type == pygame.QUIT:
+                    elif e.key == pygame.K_f:
+                        pygame.display.toggle_fullscreen()
+                        window.fill((0, 0, 0))
+                        window.blit(bg, ((width - bg_w) / 2, (height - bg_h) / 2))
+                        pygame.display.flip()
+                        pygame.display.update()
+                elif e.type == pygame.QUIT:
                     running = False
         # For debugging
         print("Final chat log")
