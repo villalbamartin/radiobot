@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import json
 import logging
 import pygame
 import sounddevice as sd
