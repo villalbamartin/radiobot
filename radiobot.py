@@ -4,6 +4,7 @@ import logging
 import pygame
 import sounddevice as sd
 import sys
+from multiprocessing import Pipe
 
 
 def setup_mic():
@@ -59,9 +60,34 @@ if __name__ == '__main__':
         else:
             mic_device = args.mic_device
 
-    # Set up the screen if needed
-    if args.no_gui:
-        print("Display disabled")
+    # Start the services
+    # First, the speech-to-Text server
+    speech_to_text_pipe = Pipe()
+    pid = os.fork()
+    if pid == 0:
+        # Speech-to-text server
+        import speech_to_text
+        speech_to_text.run_speech_server(speech_to_text_pipe[1])
+        # speech_to_text_pipe[0] is ours
+        # commands: 'start_recording', 'stop_recording', 'quit'
     else:
-        print("Using PyGame for display")
+        # LLM server
+        llm_pipe = Pipe()
+        pid = os.fork()
+        if pid == 0:
+            # Use llm_pipe[1]
+            pass
+        else:
+            # llm_pipe[0] is ours 
+
+            # Set up the screen if needed
+            pygame.init()
+            if args.no_gui:
+                print("Display disabled")
+            else:
+                print("Using PyGame for display")
+                width = 800
+                height = 425
+                window = pygame.display.set_mode((width, height))
+                window.fill((0, 0, 0))
 
