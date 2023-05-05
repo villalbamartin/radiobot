@@ -17,6 +17,8 @@ def callback(indata, frames, time, status):
 
 def run_speech_server(comm_pipe, device=0):
     # Parameters for the recording
+    devs = sd.query_devices(kind='input')
+    device = devs['index']
     device_info = sd.query_devices(device, 'input')
     samplerate = int(device_info['default_samplerate'])
     fd, filename = tempfile.mkstemp(suffix='.wav')
