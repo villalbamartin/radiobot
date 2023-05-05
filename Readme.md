@@ -1,16 +1,45 @@
+Radiobot
+========
+A project that simulates a radio for taking with a Large Language Model (LLM).
+
+The system supports two modes, `chat` and `talk`. In `chat` mode you can talk
+to the system, while `talk` mode lets the model generate infinite text.
+
 
 Installation
 ------------
-Most Python dependencies are listed in the `requirements.txt` file.
-
-The `libffi` library has to be installed with the following command
-which may require the `libffi-dev` package:
+First, install the system dependencies. In Debian you install it with:
 
 ```
+apt-get install libffi-dev ffmpeg
+```
+
+Most Python dependencies are listed in the `requirements.txt` file.
+You can create a virtual environment for them and install all dependencies
+with the following commands:
+
+```
+python3 -m venv <path/to/virtual_env>
+source <path/to/virtual_env>/bin/activate
+pip install -r requirements.txt
 pip install --force-reinstall --no-binary :all: cffi
 ```
 
-The following non-Python dependencies are also needed: `ffmpeg`.
+Once this is done, you can activate this environment whenever you want to use
+the software with the command:
+
+```
+source <path/to/virtual_env>/bin/activate
+```
+
+Usage
+-----
+You run the code with the command:
+
+```
+python3 radiobot.py <path/to/llm>
+```
+
 
 Attributions
 ------------
