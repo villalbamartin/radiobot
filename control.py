@@ -119,7 +119,7 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
             elif 'release_r' in events:
                 # Change from dialog to radio mode
                 state = 'idle_radio'
-                conversation = ['And now, the news. Our top story tonight: a woman was gifted a cute puppy.']
+                conversation = list(json_config['monologue_seed'])
                 music.set_volume(0.5)
                 # TODO: Animation and sound
             elif 'release_f' in events:
@@ -165,8 +165,7 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
         elif state == 'idle_radio':
             if 'release_r' in events:
                 # Change from dialog to radio mode
-                conversation = ['Good morning! Nice to see you.',
-                                'Thanks. Good morning to you too!']
+                conversation = list(json_config['dialog_seed'])
                 music.set_volume(0.5)
                 state = 'idle_dialog'
             elif 'release_f' in events:
