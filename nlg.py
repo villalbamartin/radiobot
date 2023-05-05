@@ -24,15 +24,12 @@ def run_nlg_server(llm_path, comm_pipe, username="User"):
         if prompt == 'quit':
             running = False
         else:
-            print(prompt)
-            print(len(prompt))
-            print(len(prompt.split(' ')))
             try:
                 output = llm(prompt, max_tokens=64,
                              stop=[f"{username}:", "I: ", "\n"],
                              echo=True)
             except ValueError:
-                logging.debug("Prompt too long: {} words, {} characters".format(
+                print("Prompt too long: {} words, {} characters".format(
                     len(prompt),
                     len(prompt.split(' '))))
                 prompt = prompt[-500:]
