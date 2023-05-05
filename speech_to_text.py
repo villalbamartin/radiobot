@@ -52,4 +52,6 @@ def run_speech_server(comm_pipe, device=0):
                     print("You said: " + result["text"])
                     comm_pipe.send(result["text"].strip())
         elif control_msg == 'quit':
+            # Stop the loop and remove the temporary file
             running = False
+            os.unlink(filename)
