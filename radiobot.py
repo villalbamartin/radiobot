@@ -60,6 +60,10 @@ if __name__ == '__main__':
         else:
             mic_device = args.mic_device
 
+    # Read some general parameters
+    with open('config.json', 'r') as fp:
+        app_config = json.load(fp)
+
     # Start the services
     # First, the speech-to-Text server
     speech_to_text_pipe = Pipe()
@@ -68,17 +72,20 @@ if __name__ == '__main__':
         # Speech-to-text server
         import speech_to_text
         speech_to_text.run_speech_server(speech_to_text_pipe[1])
-        # speech_to_text_pipe[0] is ours
-        # commands: 'start_recording', 'stop_recording', 'quit'
     else:
-        # LLM server
         llm_pipe = Pipe()
         pid = os.fork()
         if pid == 0:
-            # Use llm_pipe[1]
-            pass
+            # LLM server
+            import nlg
+            nlg.start_server(args.llm, llm_pipe[1],
+                             username=app_config['username'])
         else:
-            # llm_pipe[0] is ours 
+            # Control and screen thread
+            # speech_to_text_pipe[0] is ours
+            # commands: 'start_recording', 'stop_recording', 'quit'
+            # llm_pipe[0] is also ours 
+            # send 'quit' to quit
 
             # Set up the screen if needed
             pygame.init()
