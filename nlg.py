@@ -1,15 +1,8 @@
 #!/usr/bin/env python3
-import os
-import pygame
-import tempfile
-import time
 from llama_cpp import Llama
-from multiprocessing import Pipe
-from ovos_tts_plugin_mimic3 import Mimic3TTSPlugin
-from pygame.mixer import music, Sound
 
 
-def start_server(llm_path, comm_pipe):
+def start_server(llm_path, comm_pipe, username="User"):
     """ Starts the server that generates a reply for a given prompt.
 
     Parameters
@@ -23,6 +16,7 @@ def start_server(llm_path, comm_pipe):
     -----
     To close the server send the 'quit' message through the pipe.
     """
+    llm = Llama(model_path=llm_path)
     running = True
     while running:
         prompt = comm_pipe.recv()
