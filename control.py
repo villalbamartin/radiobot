@@ -87,7 +87,13 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
                 elif e.key == pygame.K_r:
                     events.append('release_r')
                 elif e.key == pygame.K_f:
-                    events.append('release_f')
+                    # Switch screen mode - this doesn't need to go through the
+                    # regular pipeline
+                    pygame.display.toggle_fullscreen()
+                    window.fill((0, 0, 0))
+                    window.blit(bg, ((width - bg_w) / 2, (height - bg_h) / 2))
+                    pygame.display.flip()
+                    pygame.display.update()
                 elif e.key == pygame.K_ESCAPE:
                     # This is the one condition that doesn't go through the
                     # state machine
@@ -122,13 +128,6 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
                 conversation = list(json_config['monologue_seed'])
                 music.set_volume(0.5)
                 # TODO: Animation and sound
-            elif 'release_f' in events:
-                # Switch screen mode
-                pygame.display.toggle_fullscreen()
-                window.fill((0, 0, 0))
-                window.blit(bg, ((width - bg_w) / 2, (height - bg_h) / 2))
-                pygame.display.flip()
-                pygame.display.update()
         elif state == 'recording':
             if 'release_space' in events:
                 # Stop recording
@@ -168,13 +167,6 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
                 conversation = list(json_config['dialog_seed'])
                 music.set_volume(0.5)
                 state = 'idle_dialog'
-            elif 'release_f' in events:
-                # Switch screen mode
-                pygame.display.toggle_fullscreen()
-                window.fill((0, 0, 0))
-                window.blit(bg, ((width - bg_w) / 2, (height - bg_h) / 2))
-                pygame.display.flip()
-                pygame.display.update()
             else:
                 # I'm not doing anything, so let's generate
                 response_prompt = nlp_utils.broadcast_prompt(
