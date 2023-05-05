@@ -79,7 +79,7 @@ if __name__ == '__main__':
         if pid == 0:
             # LLM server
             import nlg
-            nlg.start_server(args.llm, llm_pipe[1],
+            nlg.run_nlg_server(args.llm, llm_pipe[1],
                              username=app_config['username'])
         else:
             # Control and screen thread

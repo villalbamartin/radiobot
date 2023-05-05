@@ -2,7 +2,7 @@
 from llama_cpp import Llama
 
 
-def start_server(llm_path, comm_pipe, username="User"):
+def run_nlg_server(llm_path, comm_pipe, username="User"):
     """ Starts the server that generates a reply for a given prompt.
 
     Parameters
