@@ -90,8 +90,9 @@ if __name__ == '__main__':
 
             # Set up the screen if needed
             pygame.init()
-            if args.no_gui:
+            if args.no_gui or args.no_mic:
                 print("Display disabled")
+                window = None
             else:
                 print("Using PyGame for display")
                 width = 800
