@@ -19,14 +19,15 @@ def callback(indata, frames, time, status):
 def setup_mic():
     """ Routine for setting up the microphone automatically.
     """
+    logger = logging.getLogger('radiobot')
     device = None
     # Use the first available device
     input_devices = sd.query_devices(kind='input')
     if isinstance(input_devices, dict):
         device = input_devices['index']
-        logging.debug('Using input device {}: {}'.format(
-                      input_devices['index'],
-                      input_devices['name']))
+        logger.debug('Using input device {}: {}'.format(
+                     input_devices['index'],
+                     input_devices['name']))
     elif isinstance(input_devices, list):
             print("Multiple devices found")
             for dev in input_devices:
@@ -37,7 +38,7 @@ def setup_mic():
                    input_devices[0]['index'],
                    input_devices[0]['name']))
     else:
-        print('No input device found')
+        logger.critical('No input device found')
         device = -1
     return device
 

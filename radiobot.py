@@ -9,6 +9,10 @@ from multiprocessing import Pipe
 
 
 if __name__ == '__main__':
+    # The very first thing is setting the logger
+    logger = logging.getLogger('radiobot')
+    logger.setLevel(logging.DEBUG)
+
     # General command line options
     parser = argparse.ArgumentParser(description='Launchs the radio')
     parser.add_argument('llm', help='LLM to use for speech generation')
@@ -20,7 +24,7 @@ if __name__ == '__main__':
                         action='store_true',
                         help='Use the keyboard for input instead of speech')
     args = parser.parse_args()
-    print(args)
+    logger.debug(args)
 
     # Set up the microphone if needed
     mic_device = None

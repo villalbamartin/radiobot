@@ -49,6 +49,7 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
     This code uses a Statechart state machine under the hood.
     See the documentation for a proper diagram.
     """
+    logger = logging.getLogger('radiobot')
     # Create a PyGame screen
     width = json_config['screen_width']
     height = json_config['screen_height']
@@ -211,11 +212,11 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
         # Is this correct?
         events = []
         if state != old_state:
-            logging.debug(f"{old_state} -> {state}")
+            logger.debug(f"{old_state} -> {state}")
     # For debugging
-    print("Final chat log")
+    logger.debug("Last chat log")
     for utterance in conversation:
-        print(f"- {utterance}")
+        logger.debug(f"- {utterance}")
 
 
 def run_main_loop(pipe_llm, pipe_speech_to_text, json_config):
