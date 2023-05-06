@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import pygame
+import sys
 from multiprocessing import Pipe
 
 
@@ -23,13 +24,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     logger.debug(args)
 
-    # Set up the microphone if needed
-    mic_device = None
-    if args.no_mic:
-        print("Using keyboard as input")
-    else:
-        print("Using microphone as input")
-
     # Read some general parameters
     with open('config.json', 'r') as fp:
         app_config = json.load(fp)
@@ -41,7 +35,12 @@ if __name__ == '__main__':
     if speech_pid == 0:
         # Speech-to-text server
         import speech_to_text
-        speech_to_text.run_speech_server(speech_to_text_pipe[1],
+        if args.no_gui:
+            # We don't actually need this process, because there will be
+            # no recording.
+            sys.exit(0)
+        else:
+            speech_to_text.run_speech_server(speech_to_text_pipe[1],
                                          device=args.mic_device)
     else:
         llm_pipe = Pipe()
@@ -60,12 +59,12 @@ if __name__ == '__main__':
 
             # Set up the screen if needed
             pygame.init()
-            if args.no_gui or args.no_mic:
+            if args.no_gui:
                 print("Display disabled")
             else:
                 print("Using PyGame for display")
-                control.run_main_loop(llm_pipe[0], speech_to_text_pipe[0],
-                                      app_config, not args.no_gui)
+            control.run_main_loop(llm_pipe[0], speech_to_text_pipe[0],
+                                  app_config, not args.no_gui)
             # Wait for the subprocesses to finish
             os.waitpid(speech_pid, 0)
             os.waitpid(llm_pid, 0)

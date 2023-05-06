@@ -30,14 +30,14 @@ def setup_mic():
                      input_devices['index'],
                      input_devices['name']))
     elif isinstance(input_devices, list):
-            print("Multiple devices found")
-            for dev in input_devices:
-                print("Device {}: {}".format(dev['index'], dev['name']))
-                if device is None:
-                    device = dev['index']
-            print('Using first input device {}: {}'.format(
-                   input_devices[0]['index'],
-                   input_devices[0]['name']))
+        print("Multiple devices found")
+        for dev in input_devices:
+            print("Device {}: {}".format(dev['index'], dev['name']))
+            if device is None:
+                device = dev['index']
+        print('Using first input device {}: {}'.format(
+               input_devices[0]['index'],
+               input_devices[0]['name']))
     else:
         logger.critical('No input device found')
         device = -1
@@ -85,4 +85,3 @@ def run_speech_server(comm_pipe, device=None):
             os.unlink(filename)
     # Finish the process nicely
     sys.exit(0)
-
