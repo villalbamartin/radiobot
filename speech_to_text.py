@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 import tempfile
 import queue
 import sounddevice as sd
@@ -82,3 +83,6 @@ def run_speech_server(comm_pipe, device=None):
             # Stop the loop and remove the temporary file
             running = False
             os.unlink(filename)
+    # Finish the process nicely
+    sys.exit(0)
+

@@ -37,16 +37,16 @@ if __name__ == '__main__':
     # Start the services
     # First, the speech-to-Text server
     speech_to_text_pipe = Pipe()
-    pid = os.fork()
-    if pid == 0:
+    speech_pid = os.fork()
+    if speech_pid == 0:
         # Speech-to-text server
         import speech_to_text
         speech_to_text.run_speech_server(speech_to_text_pipe[1],
                                          device=args.mic_device)
     else:
         llm_pipe = Pipe()
-        pid = os.fork()
-        if pid == 0:
+        llm_pid = os.fork()
+        if llm_pid == 0:
             # LLM server
             import nlg
             nlg.run_nlg_server(args.llm, llm_pipe[1],
@@ -66,3 +66,8 @@ if __name__ == '__main__':
                 print("Using PyGame for display")
                 control.run_main_loop(llm_pipe[0], speech_to_text_pipe[0],
                                       app_config, not args.no_gui)
+            # Wait for the subprocesses to finish
+            os.waitpid(speech_pid, 0)
+            os.waitpid(llm_pid, 0)
+            sys.exit(0)
+

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-from llama_cpp import Llama
 import logging
+import sys
+from llama_cpp import Llama
 
 
 def run_nlg_server(llm_path, comm_pipe, username="User"):
@@ -42,3 +43,6 @@ def run_nlg_server(llm_path, comm_pipe, username="User"):
             #    new_text = new_text[:new_text.rfind('.')] + "."
             new_text = new_text.split('I: ')[-1].strip()
             comm_pipe.send(new_text)
+    # Finish the process nicely
+    sys.exit(0)
+
