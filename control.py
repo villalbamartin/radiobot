@@ -55,7 +55,7 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
     height = json_config['screen_height']
     window = pygame.display.set_mode((width, height))
     window.fill((0, 0, 0))
-    bg = pygame.image.load("./images/background.jpg")
+    bg = pygame.image.load("./images/background.png")
     bg_w, bg_h = bg.get_size()
     window.blit(bg, ((width - bg_w) / 2, (height - bg_h) / 2))
     pygame.display.update()
@@ -249,8 +249,8 @@ def _run_main_loop_txt(pipe_llm, pipe_speech_to_text, json_config,
         old_state = state
         # First, collect all possible events.
         for e in pygame.event.get():
-            elif e.type == pygame.KEYUP:
-                elif e.key == pygame.K_r:
+            if e.type == pygame.KEYUP:
+                if e.key == pygame.K_r:
                     events.append('release_r')
         # Check whether we were talking but then finished.
         # Note: this event could get lost

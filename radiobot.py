@@ -70,4 +70,3 @@ if __name__ == '__main__':
             os.waitpid(speech_pid, 0)
             os.waitpid(llm_pid, 0)
             sys.exit(0)
-
