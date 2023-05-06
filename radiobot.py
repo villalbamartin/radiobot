@@ -43,6 +43,7 @@ if __name__ == '__main__':
             speech_to_text.run_speech_server(speech_to_text_pipe[1],
                                          device=args.mic_device)
     else:
+        logger.debug(f'Speech-to-text: process {speech_pid}')
         llm_pipe = Pipe()
         llm_pid = os.fork()
         if llm_pid == 0:
@@ -52,10 +53,7 @@ if __name__ == '__main__':
                                username=app_config['username'])
         else:
             # Control and screen thread
-            # speech_to_text_pipe[0] is ours
-            # commands: 'start_recording', 'stop_recording', 'quit'
-            # llm_pipe[0] is also ours 
-            # send 'quit' to quit
+            logger.debug(f'LLM: process {llm_pid}')
 
             # Set up the screen if needed
             pygame.init()
