@@ -134,7 +134,7 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
         elif state == 'recording':
             if 'release_space' in events:
                 # Stop recording
-                music.set_volume(0.05)
+                music.set_volume(0.5)
                 Sound.play(button_off)
                 pipe_speech_to_text.send('stop_recording')
                 state = 'transcribing'
