@@ -19,10 +19,7 @@ if __name__ == '__main__':
     parser.add_argument('-mic-device', type=int, help='Device to use as mic.')
     parser.add_argument('-t', '--no-gui',
                         action='store_true',
-                        help='Don\'t show anything on screen')
-    parser.add_argument('-m', '--no-mic',
-                        action='store_true',
-                        help='Use the keyboard for input instead of speech')
+                        help='Use the console-ony interface.')
     args = parser.parse_args()
     logger.debug(args)
 
@@ -44,7 +41,8 @@ if __name__ == '__main__':
     if pid == 0:
         # Speech-to-text server
         import speech_to_text
-        speech_to_text.run_speech_server(speech_to_text_pipe[1], device=args.mic_device)
+        speech_to_text.run_speech_server(speech_to_text_pipe[1],
+                                         device=args.mic_device)
     else:
         llm_pipe = Pipe()
         pid = os.fork()
@@ -67,4 +65,4 @@ if __name__ == '__main__':
             else:
                 print("Using PyGame for display")
                 control.run_main_loop(llm_pipe[0], speech_to_text_pipe[0],
-                                      app_config)
+                                      app_config, not args.no_gui)
