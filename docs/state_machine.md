@@ -14,11 +14,14 @@ Statechart and a regular state machine are:
   * Parallel execution: You can define sub-machines, "run" them in parallel,
     and whenever one of them generates an event it will be broadcasted to all
     other parallel machines.
+  * An event can trigger another. For instance, the transition `eat/not_hungry`
+    means that the machine moves from its current state when receiving the
+    `eat` event and generates a `not hungry` event while doing so.
   * States with timeout: boxes marked with `-/\/\---` are states that you
     leave either because you received a specific event (as usual) or because
-    an amount of time has passed. This is useful to model situations like
-    "I give a .wav file to the speech-to-text model and I eventually get an
-    output out of it".
+    an amount of time has passed (the `timeout` event). This is useful to
+    model situations like "I give a .wav file to the speech-to-text system
+    and I eventually get an output out of it".
 
 
 Overview
@@ -34,7 +37,7 @@ to the LLM to generate a proper response. Once the LLM has generated a new
 utterance we speak it out loud, at which point we go back at the beginning
 and the loop starts again.
 
-Radio mode is similar, but with one critical difference: we can start
+Radio mode is similar but with one critical difference: we can start
 calculating the next utterance while the current one is being spoken.
 This leads to the `think_and_say` state where both things are happening in
 parallel. If the next utterance is ready before the previous one is spoken
@@ -45,19 +48,22 @@ wait.
 
 For the purpose of this model the LLM, the speech-to-text system, and the
 user are simple machines that oscillate between two states. The LLM, for
-instance, remains mostly idle until it receives a prompt, at which point it
-will do work for some time, eventually generate an event, and return to
+instance, remains idle until it receives a prompt, at which point it
+will work for some time, eventually generate an event, and return to
 its starting state.
 
+Finally, the text-only mode is a smaller version of this diagram where
+the `press_space`/`release_space`. This second diagram is not detailed
+in this document, but I have faith that you can figure it out yourself.
 
 Diagram
 -------
 ```
                                       +-------------------------------------+
-        +-------------+     release_r |  +------------+                     |
+        +-------------+    release_r  |  +------------+                     |
   *---->| idle_dialog |----------------->| idle_radio |                     |
      +->|             |<--------------|  |            |                     |
-     |  +-------------+     release_r |  +------------+                     |
+     |  +-------------+    release_r  |  +------------+                     |
      |         | press_space          |         | transcribed               |
      |         V                      |         V                           |
      |  +-------------+               |  +----------------+                 |
