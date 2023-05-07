@@ -20,7 +20,7 @@ def run_nlg_server(llm_path, comm_pipe, username="User"):
     """
     logger = logging.getLogger('radiobot')
     try:
-        llm = Llama(model_path=llm_path)
+        llm = Llama(model_path=llm_path, seed=0)
         running = True
         while running:
             prompt = comm_pipe.recv()
@@ -28,7 +28,7 @@ def run_nlg_server(llm_path, comm_pipe, username="User"):
                 running = False
             else:
                 try:
-                    output = llm(prompt, max_tokens=64,
+                    output = llm(prompt, max_tokens=128,
                                  stop=[f"{username}:", "I: ", "\n"],
                                  echo=True)
                 except ValueError:
@@ -36,7 +36,7 @@ def run_nlg_server(llm_path, comm_pipe, username="User"):
                         len(prompt),
                         len(prompt.split(' '))))
                     prompt = prompt[-500:]
-                    output = llm(prompt, max_tokens=64,
+                    output = llm(prompt, max_tokens=128,
                                  stop=[f"{username}:", "I: ", "\n"],
                                  echo=True)
                 new_text = output['choices'][0]['text']

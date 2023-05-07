@@ -1,3 +1,59 @@
+import math
+import logging
+
+
+def best_idx(initial_prompt, conversation_log, desired_context, max_chars=1300):
+    """ Returns the index to use in a conversation log in order to keep
+    the maximum number of utterances possible from turn to turn.
+    See "Notes" for more details.
+
+    Parameters
+    ----------
+    initial_prompt : str
+        Prompt for the overall dialogue
+    conversation_log : list(str)
+        Log of all utterances in the program's history.
+    desired_context : int
+        Ideal desired length for a prompt. Once this number of utterances have
+        been reached, the pointer will be moved forward.
+    max_chars : int
+        Maximum number of characters supported by the LLM. Note that the LLM
+        uses tokens instead of characters, so this measure is just an
+        approximation.
+
+    Notes
+    -----
+    When generating with llama-cpp-python it is useful to keep the previous
+    context unaltered, as this will save computation and generate faster.
+    Given that there is a maximum number of tokens, we would like to keep the
+    context as long as possible.
+    This algorithm takes a conversation log and returns the index of the first
+    utterance to use. This index is "sticky" in the sense that it will always
+    remain the same except in two situation: either when the number of
+    utterances reaches the desired context, or when the number of characters
+    exceeds max_chars. When that happens we move the window forward, keeping
+    only the last two utterances as context.
+    """
+    word_accum = len(initial_prompt)
+    pointer_safe = 0
+    pointer_unsafe = 0
+
+    while pointer_unsafe < len(conversation_log):
+        new_words = len(conversation_log[pointer_unsafe])
+        if word_accum + new_words < max_chars:
+            if pointer_unsafe - pointer_safe == desired_context:
+                pointer_safe = pointer_unsafe - 2
+                word_accum = len(initial_prompt) + \
+                             len(conversation_log[pointer_unsafe]) + \
+                             len(conversation_log[pointer_unsafe-1])
+        else:
+            pointer_safe = pointer_unsafe - 2
+            word_accum = len(initial_prompt) + \
+                         len(conversation_log[pointer_unsafe]) + \
+                         len(conversation_log[pointer_unsafe - 1])
+        pointer_unsafe += 1
+    return pointer_safe
+
 
 def build_reply_prompt(initial_prompt, conversation_log, context_turns=5, username="User"):
     """ Generates an LLM reply for a given conversation. The conversation
@@ -24,9 +80,10 @@ def build_reply_prompt(initial_prompt, conversation_log, context_turns=5, userna
     assert len(conversation_log) % 2 == 1, \
         "The conversation should start and end with the user"
     prompt = initial_prompt.format(username=username) + "\n"
-    user_turn = True
-    subset = 1+2*context_turns
-    for utterance in conversation_log[-subset:]:
+    idx = best_idx(prompt, conversation_log, 2*context_turns, max_chars=1280)
+    # The user turns are the even ones, while the odd ones are from the computer
+    user_turn = idx % 2 == 0
+    for utterance in conversation_log[idx:]:
         if user_turn:
             user = username
         else:
@@ -35,6 +92,7 @@ def build_reply_prompt(initial_prompt, conversation_log, context_turns=5, userna
         prompt += new_line
         user_turn = not user_turn
     prompt += "I: "
+    # print(f"Current idx: {idx}/{len(speech_log)} - {len(prompt)} chars")
     return prompt
 
 
@@ -62,7 +120,9 @@ def broadcast_prompt(initial_prompt, speech_log, context_turns=10, username="Use
         history.
     """
     prompt = initial_prompt.format(username=username) + "\n"
-    for utterance in speech_log[-context_turns:]:
+    idx = best_idx(prompt, speech_log, context_turns, max_chars=1300)
+    for utterance in speech_log[idx:]:
         prompt += f"I: {utterance}\n"
     prompt += "I: "
+    print(f"Current idx: {idx}/{len(speech_log)} - {len(prompt)} chars")
     return prompt
