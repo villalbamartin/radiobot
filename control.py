@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import logging
+import math
 import nlp_utils
 import os
 import pygame
@@ -40,6 +41,42 @@ def say(text, mimic, voice_file, text_output=False):
     return speech.get_length()
 
 
+def draw_image(window, width, height, images, speak=True):
+    """ Draws the background image.
+
+    Parameters
+    ----------
+    window : pygame.Display
+        Display where all images are to be drawn.
+    width : int
+        Width of the screen.
+    height : int
+        Height of the screen.
+    images : dict
+        Dictionary containing all required images.
+    speak : bool
+        Whether to draw the image with or without the microphene.
+    """
+    window.fill((0, 0, 0))
+    bg_w, bg_h = images['bg'].get_size()
+    window.blit(images['bg'], ((width - bg_w) / 2, (height - bg_h) / 2))
+    if speak:
+        window.blit(images['white_button'], (344, 239))
+        window.blit(images['mic'], (-5, 107))
+    else:
+        window.blit(images['red_button'], (386, 239))
+    # Draws the needle - static for now, but animated in the near future.
+    radius = 50.0
+    angle = 3.141592/4.0
+    start = (377, 200)
+    end = (start[0] + int(radius*math.cos(angle)),
+           start[1] - int(radius*math.sin(angle)))
+    pygame.draw.line(window, (200, 50, 50), start, end, 1)
+    window.blit(images['needle_thingy'], (365, 194))
+    pygame.display.flip()
+    pygame.display.update()
+
+
 def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
                        button_on, button_off, mimic, voice_file):
     """ Runs the main loop of the progran in GUI mode.
@@ -51,14 +88,16 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
     """
     logger = logging.getLogger('radiobot')
     # Create a PyGame screen
-    width = json_config['screen_width']
-    height = json_config['screen_height']
-    window = pygame.display.set_mode((width, height))
-    window.fill((0, 0, 0))
-    bg = pygame.image.load("./images/background.png")
-    bg_w, bg_h = bg.get_size()
-    window.blit(bg, ((width - bg_w) / 2, (height - bg_h) / 2))
-    pygame.display.update()
+    window = pygame.display.set_mode((json_config['screen_width'],
+                                      json_config['screen_height']))
+    images = dict()
+    images['red_button'] = pygame.image.load("./images/red_button_on.png")
+    images['white_button'] = pygame.image.load("./images/white_button_on.png")
+    images['needle_thingy'] = pygame.image.load("./images/needle_support.png")
+    images['mic'] = pygame.image.load("./images/mic.png")
+    images['bg'] = pygame.image.load("./images/background.png")
+    draw_image(window, json_config['screen_width'],
+               json_config['screen_height'], images, speak=True)
 
     # Seed of the initial conversation
     conversation = list(json_config['dialog_seed'])
@@ -93,10 +132,11 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
                     # Switch screen mode - this doesn't need to go through the
                     # regular pipeline
                     pygame.display.toggle_fullscreen()
-                    window.fill((0, 0, 0))
-                    window.blit(bg, ((width - bg_w) / 2, (height - bg_h) / 2))
-                    pygame.display.flip()
-                    pygame.display.update()
+                    draw_image(window, json_config['screen_width'],
+                               json_config['screen_height'], images,
+                               speak=state in {'idle_dialog', 'recording',
+                                               'transcribing', 'thinking',
+                                               'speaking'})
                 elif e.key == pygame.K_ESCAPE:
                     # This is the one condition that doesn't go through the
                     # state machine
@@ -131,6 +171,9 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
                 conversation = list(json_config['monologue_seed'])
                 music.set_volume(0.5)
                 # TODO: Animation and sound
+                draw_image(window, json_config['screen_width'],
+                           json_config['screen_height'], images,
+                           speak=False)
         elif state == 'recording':
             if 'release_space' in events:
                 # Stop recording
@@ -178,6 +221,12 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
                     context_turns=5,
                     username=json_config['username'])
                 pipe_llm.send(response_prompt)
+                # This state is only reached at the very beginning, so let's
+                # play the opening prompt
+                music.set_volume(0.025)
+                play_time = say('\n'.join(conversation), mimic, voice_file)
+                time.sleep(play_time)
+                music.set_volume(0.5)
                 # TODO: Animation and sound
                 state = 'thinking_radio'
         elif state == 'thinking_radio':
