@@ -39,6 +39,12 @@ def run_nlg_server(llm_path, comm_pipe, username="User"):
                     output = llm(prompt, max_tokens=128,
                                  stop=[f"{username}:", "I: ", "\n"],
                                  echo=True)
+                except RuntimeError as e:
+                    logger.warning(e)
+                    prompt = prompt[-150:]
+                    output = llm(prompt, max_tokens=128,
+                                 stop=[f"{username}:", "I: ", "\n"],
+                                 echo=True)
                 new_text = output['choices'][0]['text']
                 #if new_text.rfind('.') > 0:
                 #    new_text = new_text[:new_text.rfind('.')] + "."
