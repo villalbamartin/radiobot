@@ -57,7 +57,12 @@ def run_speech_server(comm_pipe, device=None):
     # Initialize the speech-to-text system and ensure it only runs on CPU
     # (the GPU will be needed for the language model)
     os.environ['CUDA_VISIBLE_DEVICES'] = ""
-    model = whisper.load_model("base")
+    try:
+        model = whisper.load_model('/home/villalba/.cache/whisper/base.pt')
+        logger.debug("Loaded local Whisper model")
+    except RuntimeError:
+        model = whisper.load_model('base')
+        logger.debug("Loaded internet Whisper model")
     running = True
     while running:
         control_msg = comm_pipe.recv()
