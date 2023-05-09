@@ -40,6 +40,10 @@ You run the code with the command:
 python3 radiobot.py <path/to/llm>
 ```
 
+You need a configuration file before your first run. The provided file
+`config.json.template` is an example of such a file. You can copy it to a
+file named `config.json`.
+
 By default the program shows a single screen with a radio and plays static
 noise. 
 
