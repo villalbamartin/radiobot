@@ -15,6 +15,8 @@ def signal_handler(sig, frame):
     print("Ending the program")
     llm_pipe[0].send('quit')
     os.waitpid(llm_pid, 0)
+    with open(ssml_output, 'a') as fp:
+        print('</speak>', file=fp)
     sys.exit(0)
 
 
@@ -30,6 +32,10 @@ if __name__ == '__main__':
     with open('config.json', 'r') as fp:
         app_config = json.load(fp)
 
+    time_string = int(time.time())
+    txt_output = "output_{}.txt".format(time_string)
+    ssml_output = "output_{}.ssml".format(time_string)
+
     # Start the services
     llm_pipe = Pipe()
     llm_pid = os.fork()
@@ -41,17 +47,21 @@ if __name__ == '__main__':
     else:
         signal.signal(signal.SIGINT, signal_handler)
         # Begin the generation procedure
-        with open("output_{}.txt".format(int(time.time())), 'w') as fp:
-            conversation = list(app_config['monologue_seed'])
-            for utterance in conversation:
-                print(utterance, flush=True, file=fp)
-            while True:
-                response_prompt = nlp_utils.broadcast_prompt(
-                    app_config['monologue_prompt'],
-                    conversation,
-                    context_turns=5,
-                    username=app_config['username'])
-                llm_pipe[0].send(response_prompt)
-                response = llm_pipe[0].recv()
-                print(response, flush=True, file=fp)
-                conversation.append(response)
+        with open(txt_output, 'w') as fp:
+            with open(ssml_output, 'w') as fp_ssml:
+                print("<speak>", flush=True, file=fp_ssml)
+                conversation = list(app_config['monologue_seed'])
+                for utterance in conversation:
+                    print(utterance, flush=True, file=fp)
+                    print(f'<s>{utterance}</s><break time="1s" />', flush=True, file=fp_ssml)
+                while True:
+                    response_prompt = nlp_utils.broadcast_prompt(
+                        app_config['monologue_prompt'],
+                        conversation,
+                        context_turns=5,
+                        username=app_config['username'])
+                    llm_pipe[0].send(response_prompt)
+                    response = llm_pipe[0].recv()
+                    print(response, flush=True, file=fp)
+                    print(f'<s>{response}</s><break time="1s" />', flush=True, file=fp_ssml)
+                    conversation.append(response)

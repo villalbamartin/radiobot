@@ -397,6 +397,7 @@ def _run_main_loop_txt(pipe_llm, pipe_speech_to_text, json_config,
     for utterance in conversation:
         logger.debug(f"- {utterance}")
 
+
 def run_main_loop(pipe_llm, pipe_speech_to_text, json_config, use_gui=True):
     """ Runs the main interaction loop.
 
@@ -443,4 +444,3 @@ def run_main_loop(pipe_llm, pipe_speech_to_text, json_config, use_gui=True):
     pygame.quit()
     # Delete the voice temporary file
     os.unlink(voice_file.name)
-
