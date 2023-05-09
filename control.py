@@ -4,6 +4,7 @@ import math
 import nlp_utils
 import os
 import pygame
+import random
 import tempfile
 import time
 from ovos_tts_plugin_mimic3 import Mimic3TTSPlugin
@@ -41,7 +42,7 @@ def say(text, mimic, voice_file, text_output=False):
     return speech.get_length()
 
 
-def draw_image(window, width, height, images, speak=True):
+def draw_image(window, width, height, images, needle_hist, speak=True):
     """ Draws the background image.
 
     Parameters
@@ -54,25 +55,47 @@ def draw_image(window, width, height, images, speak=True):
         Height of the screen.
     images : dict
         Dictionary containing all required images.
+    needle_hist : list(float)
+        History of last states of the needle - required to make the movement
+        more natural.
     speak : bool
         Whether to draw the image with or without the microphene.
     """
     window.fill((0, 0, 0))
     bg_w, bg_h = images['bg'].get_size()
     window.blit(images['bg'], ((width - bg_w) / 2, (height - bg_h) / 2))
+    
+    # Draws the needle
+    radius = 50.0
+    min_angle = 3.141592/4.0
+    max_angle = 3.0*3.141592/4.0
+    # The largest this value, the slower the needle will move
+    history_steps = 4 
+    if music.get_volume() > 0.3:
+        # The static is high, so no one is talking
+        new_angle = random.gauss(min_angle, 0.07)
+    else:
+        # The static is low, so someone is talking
+        new_angle = random.gauss(max_angle, 0.07)
+    # Clamp the values to the valid range
+    new_angle = min(max(new_angle, min_angle), max_angle)
+    needle_hist.append(new_angle)
+    angle = sum(needle_hist[-history_steps:])/len(needle_hist[-history_steps:])
+    start = (377, 200)
+    # My favorite equations of all time: convert angles and radius
+    # into (x,y) coordinates.
+    # Also, we flip the angle around (min_angle+max_angle-angle) because
+    # otherwise the needle moves in the opposite direction
+    end = (start[0] + int(radius*math.cos(min_angle + (max_angle-angle))),
+           start[1] - int(radius*math.sin(min_angle + (max_angle-angle))))
+    pygame.draw.line(window, (200, 50, 50), start, end, 1)
+    window.blit(images['needle_thingy'], (365, 194))
+    # Draws the microphone and buttons
     if speak:
         window.blit(images['white_button'], (344, 239))
         window.blit(images['mic'], (-5, 107))
     else:
         window.blit(images['red_button'], (386, 239))
-    # Draws the needle - static for now, but animated in the near future.
-    radius = 50.0
-    angle = 3.141592/4.0
-    start = (377, 200)
-    end = (start[0] + int(radius*math.cos(angle)),
-           start[1] - int(radius*math.sin(angle)))
-    pygame.draw.line(window, (200, 50, 50), start, end, 1)
-    window.blit(images['needle_thingy'], (365, 194))
     pygame.display.flip()
     pygame.display.update()
 
@@ -96,8 +119,11 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
     images['needle_thingy'] = pygame.image.load("./images/needle_support.png")
     images['mic'] = pygame.image.load("./images/mic.png")
     images['bg'] = pygame.image.load("./images/background.png")
+    # History of the needle - required for animation
+    needle_history = []
     draw_image(window, json_config['screen_width'],
-               json_config['screen_height'], images, speak=True)
+               json_config['screen_height'], images, needle_history,
+               speak=True)
     # When did we draw the screen for the last time?
     last_redraw = time.time()
 
@@ -286,7 +312,7 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
             last_redraw = time.time()
             draw_image(window, json_config['screen_width'],
                        json_config['screen_height'], images,
-                       speak=state in dialog_states)
+                       needle_history, speak=state in dialog_states)
     # When did we draw the screen for the last time?
     # For debugging
     logger.debug("Last chat log")
