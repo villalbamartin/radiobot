@@ -98,14 +98,19 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
     images['bg'] = pygame.image.load("./images/background.png")
     draw_image(window, json_config['screen_width'],
                json_config['screen_height'], images, speak=True)
+    # When did we draw the screen for the last time?
+    last_redraw = time.time()
 
     # Seed of the initial conversation
     conversation = list(json_config['dialog_seed'])
 
     # List of possible states plus the current one
-    all_states = {'idle_dialog', 'recording', 'transcribing', 'thinking',
-                  'speaking', 'idle_radio', 'thinking_radio', 'think_and_say',
-                  'slow_tongue'}
+    dialog_states = {'idle_dialog', 'recording', 'transcribing', 'thinking',
+                     'speaking'}
+    radio_states = {'idle_radio', 'thinking_radio', 'think_and_say',
+                    'slow_tongue', 'clear_queue', 'finish_talking'}
+    all_states =  dialog_states.union(radio_states)
+
     state = 'idle_dialog' 
     events = []
     # Time until the current radio line is done playing
@@ -132,11 +137,6 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
                     # Switch screen mode - this doesn't need to go through the
                     # regular pipeline
                     pygame.display.toggle_fullscreen()
-                    draw_image(window, json_config['screen_width'],
-                               json_config['screen_height'], images,
-                               speak=state in {'idle_dialog', 'recording',
-                                               'transcribing', 'thinking',
-                                               'speaking'})
                 elif e.key == pygame.K_ESCAPE:
                     # This is the one condition that doesn't go through the
                     # state machine
@@ -171,9 +171,6 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
                 conversation = list(json_config['monologue_seed'])
                 music.set_volume(0.5)
                 # TODO: Animation and sound
-                draw_image(window, json_config['screen_width'],
-                           json_config['screen_height'], images,
-                           speak=False)
         elif state == 'recording':
             if 'release_space' in events:
                 # Stop recording
@@ -244,6 +241,10 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
                                        username=json_config['username'])
                 pipe_llm.send(response_prompt)
                 state = 'think_and_say'
+            elif 'release_r' in events:
+                # We want to go back to dialog mode, but we first need
+                # to clean the utterance queue
+                state = 'clear_queue'
         elif state == 'think_and_say':
             if 'llm_uttered' in events:
                 # The LLM is done thinking the next sentence,
@@ -254,14 +255,39 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
                 # there yet.
                 music.set_volume(0.5)
                 state = 'thinking_radio'
+            elif 'release_r' in events:
+                # We want to go back to dialog mode, but we first need
+                # to clean the utterance queue.
+                # Note that the system is still speaking. This is technically
+                # a bug to be solved with an extra state
+                state = 'clear_queue'
         elif state == 'slow_tongue':
             if 'done_speaking' in events:
                 # I am ready to speak some more
                 state = 'thinking_radio'
+            elif 'release_r' in events:
+                # I want to go back to dialog mode, but the system is still
+                # talking
+                state = 'finish_talking'
+        elif state == 'finish_talking':
+            if 'done_speaking' in events:
+                music.set_volume(0.5)
+                state = 'idle_dialog'
+        elif state == 'clear_queue':
+            if 'llm_uttered' in events:
+                response = pipe_llm.recv()
+                state = 'idle_dialog'
         # Is this correct?
         events = []
         if state != old_state:
             logger.debug(f"{old_state} -> {state}")
+        # Finally, redraw the screen at an astonishing 5FPS
+        if time.time() > last_redraw + 0.2:
+            last_redraw = time.time()
+            draw_image(window, json_config['screen_width'],
+                       json_config['screen_height'], images,
+                       speak=state in dialog_states)
+    # When did we draw the screen for the last time?
     # For debugging
     logger.debug("Last chat log")
     for utterance in conversation:

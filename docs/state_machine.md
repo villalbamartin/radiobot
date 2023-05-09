@@ -44,7 +44,10 @@ parallel. If the next utterance is ready before the previous one is spoken
 out loud then all we can do is wait in the `slow_tongue` state until the
 previous sentence is done. On the other hand, if the system is done "speaking"
 before the LLM is done then we move back to the `thinking_radio` state and
-wait.
+wait. This interplay makes the code a bit more complex, including some extra
+states (`clear_queue` and `finish_talking`) that must be visited before going
+back to dialog mode to collect any missing generated texts that we need to
+throw away.
 
 For the purpose of this model the LLM, the speech-to-text system, and the
 user are simple machines that oscillate between two states. The LLM, for
@@ -53,40 +56,41 @@ will work for some time, eventually generate an event, and return to
 its starting state.
 
 Finally, the text-only mode is a smaller version of this diagram where
-the `press_space`/`release_space`. This second diagram is not detailed
-in this document, but I have faith that you can figure it out yourself.
+the `press_space`/`release_space` are just gone. This second diagram is not
+detailed in this document, but I have faith that you can figure it out
+yourself.
 
 Diagram
 -------
 ```
-                                      +-------------------------------------+
-        +-------------+    release_r  |  +------------+                     |
-  *---->| idle_dialog |----------------->| idle_radio |                     |
-     +->|             |<--------------|  |            |                     |
-     |  +-------------+    release_r  |  +------------+                     |
-     |         | press_space          |         | transcribed               |
-     |         V                      |         V                           |
-     |  +-------------+               |  +----------------+                 |
-     |  |  recording  |               |  | thinking_radio |<--------------+ |
-     |  +-------------+               |  +----------------+               | |
-     |         | release_space        |         | llm_uttered             | |
-     |         V                      |         V                         | |
-     |  +--------------+              |  +---------------+                | |
-     |  | transcribing |              |  | think_and_say |--------------->| |
-     |  +--------------+              |  +---------------+  done_speaking | |
-     |         | transcribed          |         | llm_uttered             | |
-     |         V                      |         V                         | |
-     |  +--------------+              |  +---------------+                | |
-     |  |   thinking   |              |  |  slow_tongue  |----------------+ |
-     |  +--------------+              |  +---------------+  done_speaking   |
-     |         | llm_uttered          +-------------------------------------+
-     |         V
-     |  +--------------+
-     |  |   speaking   |
-     |  +--------------+
-     |         |
-     +---------+
-    done_speaking
+        +-------------+    release_r       +------------+                     
+  *---->| idle_dialog |------------------->| idle_radio |                     
+     +->|             |<-------------------|            |                     
+     |  +-------------+  release_r ^       +------------+                     
+     |         | press_space       |             | transcribed                
+     |         V                   |             V                           
+     |  +-------------+            |       +----------------+                
+     |  |  recording  |            |    +--| thinking_radio |<--------------+
+     |  +-------------+            |    |  +----------------+               |
+     |         | release_space     |    |         | llm_uttered             |
+     |         V                   |    |         V                         |
+     |  +--------------+           |    |  +---------------+                |
+     |  | transcribing |           |    +--| think_and_say |--------------->|
+     |  +--------------+           |    |  +---------------+  done_speaking |
+     |         | transcribed       |    |         | llm_uttered             |
+     |         V                   |    |         V                         |
+     |  +--------------+           |    |  +---------------+                |
+     |  |   thinking   |           |    |  |  slow_tongue  |----------------+
+     |  +--------------+           |    |  +---------------+  done_speaking  
+     |         | llm_uttered       |    |                |
+     |         V                   |    |                | 
+     |  +--------------+           |    V release_r      V release_r
+     |  |   speaking   |           |  +-------------+  +----------------+
+     |  +--------------+           +--| clear_queue |  | finish_talking |
+     |         |                   |  +-------------+  +----------------+
+     +---------+                   |         | llm_uttered      | done_speaking
+    done_speaking                  |         V                  |
+                                   +----------------------------+
 
   *------------------------------------------------+
   | LLM                                            |
