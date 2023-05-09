@@ -5,6 +5,8 @@ import nlp_utils
 import os
 import pygame
 import random
+import select
+import sys
 import tempfile
 import time
 from ovos_tts_plugin_mimic3 import Mimic3TTSPlugin
@@ -84,7 +86,7 @@ def draw_image(window, width, height, images, needle_hist, speak=True):
     start = (377, 200)
     # My favorite equations of all time: convert angles and radius
     # into (x,y) coordinates.
-    # Also, we flip the angle around (min_angle+max_angle-angle) because
+    # Also, we flip the angle around (min_angle + max_angle - angle) because
     # otherwise the needle moves in the opposite direction
     end = (start[0] + int(radius*math.cos(min_angle + (max_angle-angle))),
            start[1] - int(radius*math.sin(min_angle + (max_angle-angle))))
@@ -264,10 +266,17 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
                                        username=json_config['username'])
                 pipe_llm.send(response_prompt)
                 state = 'think_and_say'
-            elif 'release_r' in events:
+            else:
                 # We want to go back to dialog mode, but we first need
                 # to clean the utterance queue
-                state = 'clear_queue'
+                print("Press Enter within 3 seconds to return to dialog mode")
+                key_press, _, _ = select.select([sys.stdin], [], [], 3)
+                if key_press:
+                    # There was input, so we go back to dialog mode
+                    # after cleaning the queue of messages from the LLM.
+                    # We also clear the STDIN queue.
+                    _ = sys.stdin.readline().strip()
+                    state = 'clear_queue'
         elif state == 'think_and_say':
             if 'llm_uttered' in events:
                 # The LLM is done thinking the next sentence,
@@ -328,6 +337,9 @@ def _run_main_loop_txt(pipe_llm, pipe_speech_to_text, json_config,
     """
     logger = logging.getLogger('radiobot')
 
+    # Seed of the initial conversation
+    conversation = list(json_config['dialog_seed'])
+
     # List of possible states plus the current one
     dialog_states = {'idle_dialog', 'thinking', 'speaking'}
     radio_states = {'idle_radio', 'thinking_radio', 'think_and_say',
@@ -347,9 +359,10 @@ def _run_main_loop_txt(pipe_llm, pipe_speech_to_text, json_config,
         # First, collect all possible events.
         # Let's start with all types of key presses.
         for e in pygame.event.get():
-            elif e.type == pygame.KEYUP:
+            if e.type == pygame.KEYUP:
                 if e.key == pygame.K_r:
                     events.append('release_r')
+                    print("PRESSED ERRRRRR")
                 elif e.key == pygame.K_ESCAPE:
                     # This is the one condition that doesn't go through the
                     # state machine
@@ -400,6 +413,8 @@ def _run_main_loop_txt(pipe_llm, pipe_speech_to_text, json_config,
                 music.set_volume(0.5)
                 state = 'idle_dialog'
         elif state == 'idle_radio':
+            print("Entering Radio mode. " + \
+                  "Press 'R' to return to Dialog mode or 'Esc' to quit")
             if 'release_r' in events:
                 # Change from dialog to radio mode
                 conversation = list(json_config['dialog_seed'])
@@ -427,7 +442,7 @@ def _run_main_loop_txt(pipe_llm, pipe_speech_to_text, json_config,
                 response = pipe_llm.recv()
                 music.set_volume(0.025)
                 conversation.append(response)
-                play_time = say(response, mimic, voice_file)
+                play_time = say(response, mimic, voice_file, text_output=True)
                 radio_end_time = time.time() + play_time
                 # We can start thinking the next sentence already
                 response_prompt = nlp_utils.broadcast_prompt(
