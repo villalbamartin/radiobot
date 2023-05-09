@@ -101,7 +101,7 @@ def draw_image(window, width, height, images, needle_hist, speak=True):
 
 
 def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
-                       button_on, button_off, mimic, voice_file):
+                       mimic, voice_file):
     """ Runs the main loop of the progran in GUI mode.
 
     Notes
@@ -110,6 +110,9 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
     See the documentation for a proper diagram.
     """
     logger = logging.getLogger('radiobot')
+    # Load the button sounds
+    button_on = Sound('./sounds/button_on.wav')
+    button_off = Sound('./sounds/button_off.wav')
     # Create a PyGame screen
     window = pygame.display.set_mode((json_config['screen_width'],
                                       json_config['screen_height']))
@@ -158,7 +161,6 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
                     events.append('release_space')
                 elif e.key == pygame.K_r:
                     events.append('release_r')
-                    logger.debug('release_r')
                 elif e.key == pygame.K_f:
                     # Switch screen mode - this doesn't need to go through the
                     # regular pipeline
@@ -181,9 +183,6 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
 
         # Now that I'm done with all the events, it is time to compare them
         # to my current state
-
-        # Bug: many keypresses are getting lost.
-
         if state == 'idle_dialog':
             if 'press_space' in events:
                 # Start recording
@@ -329,12 +328,12 @@ def _run_main_loop_txt(pipe_llm, pipe_speech_to_text, json_config,
     """
     logger = logging.getLogger('radiobot')
 
-    # Seed of the initial conversation
-    conversation = list(json_config['dialog_seed'])
-
     # List of possible states plus the current one
-    all_states = {'idle_dialog', 'thinking', 'speaking', 'idle_radio',
-                  'thinking_radio', 'think_and_say', 'slow_tongue'}
+    dialog_states = {'idle_dialog', 'thinking', 'speaking'}
+    radio_states = {'idle_radio', 'thinking_radio', 'think_and_say',
+                    'slow_tongue', 'clear_queue', 'finish_talking'}
+    all_states =  dialog_states.union(radio_states)
+
     state = 'idle_dialog' 
     events = []
     # Time until the current radio line is done playing
@@ -346,11 +345,18 @@ def _run_main_loop_txt(pipe_llm, pipe_speech_to_text, json_config,
         assert state in all_states, f'Invalid state {state}'
         old_state = state
         # First, collect all possible events.
+        # Let's start with all types of key presses.
         for e in pygame.event.get():
-            if e.type == pygame.KEYUP:
+            elif e.type == pygame.KEYUP:
                 if e.key == pygame.K_r:
                     events.append('release_r')
-        # Check whether we were talking but then finished.
+                elif e.key == pygame.K_ESCAPE:
+                    # This is the one condition that doesn't go through the
+                    # state machine
+                    running = False
+            elif e.type == pygame.QUIT:
+                running = False
+        # Now, check whether we were talking but then finished.
         # Note: this event could get lost
         if 0 < time.time() - radio_end_time < 1:
             events.append('done_speaking')
@@ -360,6 +366,7 @@ def _run_main_loop_txt(pipe_llm, pipe_speech_to_text, json_config,
 
         # Now that I'm done with all the events, it is time to compare them
         # to my current state
+
         if state == 'idle_dialog':
             text = input('[Quit/Radio/Utterance] ')
             if text.casefold().strip() == 'quit':
@@ -406,7 +413,13 @@ def _run_main_loop_txt(pipe_llm, pipe_speech_to_text, json_config,
                     context_turns=5,
                     username=json_config['username'])
                 pipe_llm.send(response_prompt)
-                # TODO: Animation and sound
+                # This state is only reached at the very beginning, so let's
+                # play the opening prompt
+                music.set_volume(0.025)
+                play_time = say('\n'.join(conversation), mimic, voice_file,
+                                text_output=True)
+                time.sleep(play_time)
+                music.set_volume(0.5)
                 state = 'thinking_radio'
         elif state == 'thinking_radio':
             if 'llm_uttered' in events:
@@ -414,7 +427,7 @@ def _run_main_loop_txt(pipe_llm, pipe_speech_to_text, json_config,
                 response = pipe_llm.recv()
                 music.set_volume(0.025)
                 conversation.append(response)
-                play_time = say(response, mimic, voice_file, text_output=True)
+                play_time = say(response, mimic, voice_file)
                 radio_end_time = time.time() + play_time
                 # We can start thinking the next sentence already
                 response_prompt = nlp_utils.broadcast_prompt(
@@ -423,6 +436,10 @@ def _run_main_loop_txt(pipe_llm, pipe_speech_to_text, json_config,
                                        username=json_config['username'])
                 pipe_llm.send(response_prompt)
                 state = 'think_and_say'
+            elif 'release_r' in events:
+                # We want to go back to dialog mode, but we first need
+                # to clean the utterance queue
+                state = 'clear_queue'
         elif state == 'think_and_say':
             if 'llm_uttered' in events:
                 # The LLM is done thinking the next sentence,
@@ -433,15 +450,34 @@ def _run_main_loop_txt(pipe_llm, pipe_speech_to_text, json_config,
                 # there yet.
                 music.set_volume(0.5)
                 state = 'thinking_radio'
+            elif 'release_r' in events:
+                # We want to go back to dialog mode, but we first need
+                # to clean the utterance queue.
+                # Note that the system is still speaking. This is technically
+                # a bug to be solved with an extra state
+                state = 'clear_queue'
         elif state == 'slow_tongue':
             if 'done_speaking' in events:
                 # I am ready to speak some more
                 state = 'thinking_radio'
+            elif 'release_r' in events:
+                # I want to go back to dialog mode, but the system is still
+                # talking
+                state = 'finish_talking'
+        elif state == 'finish_talking':
+            if 'done_speaking' in events:
+                music.set_volume(0.5)
+                state = 'idle_dialog'
+        elif state == 'clear_queue':
+            if 'llm_uttered' in events:
+                response = pipe_llm.recv()
+                state = 'idle_dialog'
         # Is this correct?
         events = []
         if state != old_state:
             logger.debug(f"{old_state} -> {state}")
-    # For debugging
+        # Finally, redraw the screen at an astonishing 5 FPS
+    # Output the last dialog for debugging
     logger.debug("Last chat log")
     for utterance in conversation:
         logger.debug(f"- {utterance}")
@@ -461,12 +497,8 @@ def run_main_loop(pipe_llm, pipe_speech_to_text, json_config, use_gui=True):
     use_gui : bool
         Whether to use the GUI or the text-only interface.
     """
-    # Initialize PyGame music and sounds
+    # Initialize PyGame music and sounds, and start playing static
     music.load('./sounds/gray_noise.ogg')
-    button_on = Sound('./sounds/button_on.wav')
-    button_off = Sound('./sounds/button_off.wav')
-
-    # Start playing static sound
     music.play(loops=-1)
     music.set_volume(0.5)
 
@@ -481,7 +513,7 @@ def run_main_loop(pipe_llm, pipe_speech_to_text, json_config, use_gui=True):
     # and better to have two functions that lots of nested ifs.
     if use_gui:
         _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
-                           button_on, button_off, mimic, voice_file.name)
+                           mimic, voice_file.name)
     else:
         _run_main_loop_txt(pipe_llm, pipe_speech_to_text, json_config,
                            mimic, voice_file.name)
