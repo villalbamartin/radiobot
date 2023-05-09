@@ -3,10 +3,18 @@ import argparse
 import json
 import nlp_utils
 import os
+import random
 import signal
 import sys
-import time
 from multiprocessing import Pipe
+
+
+# A list of animal names, used to generate the output files and give them
+# slightly informative names because the timestamp method was annoying
+animals = {'aardvark', 'bat', 'cow', 'dolphin', 'eagle', 'fox', 'giraffe',
+           'horse', 'iguana', 'jaguar', 'koala', 'llama', 'monkey',
+           'nandu', 'ocelot', 'panther', 'rhino', 'salamander', 'tortoise',
+           'viper', 'wombat', 'yaguarete', 'zebra'}
 
 
 def signal_handler(sig, frame):
@@ -32,9 +40,9 @@ if __name__ == '__main__':
     with open('config.json', 'r') as fp:
         app_config = json.load(fp)
 
-    time_string = int(time.time())
-    txt_output = "output_{}.txt".format(time_string)
-    ssml_output = "output_{}.ssml".format(time_string)
+    a0, a1 = random.sample(animals, 2)
+    txt_output = "monologue_{}_{}.txt".format(a0, a1)
+    ssml_output = "monologue_{}_{}.ssml".format(a0, a1)
 
     # Start the services
     llm_pipe = Pipe()
