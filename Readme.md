@@ -62,6 +62,23 @@ The program supports the following flags:
   * You can use the `-llm` parameter to select a path to a specific LLM.
 
 
+endless_gen.py
+--------------
+The script `endless_gen.py` will generate a never-ending stream of texts.
+These texts will use the same prompt defined for radio mode.
+
+You can stop the program pressing Ctrl-C. The program generates two files as
+output, one where every line is stored as plain text plus a second file in
+SSML format with extra instructions for making a small pause between
+lines.
+
+You can play the SSML file with the command:
+
+```
+mimic3 --ssml --interactive --voice 'en_US/hifi-tts_low#92' < file.ssml
+```
+
+
 Attributions
 ------------
 The [static noise sound](https://commons.wikimedia.org/wiki/File:Gray_noise.ogg)
@@ -69,5 +86,5 @@ has been created by User `Omegatron` in Wikimedia
 and released in the public domain.
 
 The [button clicking sound](https://freesound.org/people/OneKellyOrdered/sounds/624631/)
-has been created by User `OneKellyOrdered` and released 
-with a Creative Commons 0 license.
+has been created by User `OneKellyOrdered` and released under a
+Creative Commons 0 license.
