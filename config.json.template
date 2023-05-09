@@ -14,7 +14,7 @@
 	"tts": {
 		"voice": "en_US/hifi-tts_low",
 		"speaker": "92",
-		"length_scale": 1.65
+		"length_scale": 1.0
 	},
 	"screen_width": 640,
 	"screen_height": 480
