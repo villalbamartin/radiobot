@@ -69,7 +69,7 @@ def draw_image(window, width, height, images, needle_hist, speak=True):
     radius = 50.0
     min_angle = 3.141592/4.0
     max_angle = 3.0*3.141592/4.0
-    # The largest this value, the slower the needle will move
+    # The larger this value, the slower the needle will move
     history_steps = 4 
     if music.get_volume() > 0.3:
         # The static is high, so no one is talking
@@ -196,7 +196,6 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
                 state = 'idle_radio'
                 conversation = list(json_config['monologue_seed'])
                 music.set_volume(0.5)
-                # TODO: Animation and sound
         elif state == 'recording':
             if 'release_space' in events:
                 # Stop recording
@@ -250,7 +249,6 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
                 play_time = say('\n'.join(conversation), mimic, voice_file)
                 time.sleep(play_time)
                 music.set_volume(0.5)
-                # TODO: Animation and sound
                 state = 'thinking_radio'
         elif state == 'thinking_radio':
             if 'llm_uttered' in events:
@@ -307,14 +305,13 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
         events = []
         if state != old_state:
             logger.debug(f"{old_state} -> {state}")
-        # Finally, redraw the screen at an astonishing 5FPS
+        # Finally, redraw the screen at an astonishing 5 FPS
         if time.time() > last_redraw + 0.2:
             last_redraw = time.time()
             draw_image(window, json_config['screen_width'],
                        json_config['screen_height'], images,
                        needle_history, speak=state in dialog_states)
-    # When did we draw the screen for the last time?
-    # For debugging
+    # Output the last dialog for debugging
     logger.debug("Last chat log")
     for utterance in conversation:
         logger.debug(f"- {utterance}")
