@@ -132,17 +132,17 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
     # When did we draw the screen for the last time?
     last_redraw = time.time()
 
-    # Seed of the initial conversation
-    conversation = list(json_config['dialog_seed'])
-
     # List of possible states plus the current one
     dialog_states = {'idle_dialog', 'recording', 'transcribing', 'thinking',
                      'speaking'}
     radio_states = {'idle_radio', 'thinking_radio', 'think_and_say',
                     'slow_tongue', 'clear_queue', 'finish_talking'}
-    all_states =  dialog_states.union(radio_states)
-
-    state = 'idle_dialog' 
+    all_states = dialog_states.union(radio_states)
+    # Seed of the initial conversation
+    conversation = list(json_config['dialog_seed'])
+    # Initial state
+    state = 'idle_dialog'
+    # List of events that happen at every loop
     events = []
     # Time until the current radio line is done playing
     radio_end_time = 0
@@ -232,7 +232,7 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
                 state = 'idle_dialog'
         elif state == 'idle_radio':
             if 'release_r' in events:
-                # Change from dialog to radio mode
+                # Change from radio to dialog mode
                 conversation = list(json_config['dialog_seed'])
                 music.set_volume(0.5)
                 state = 'idle_dialog'
@@ -245,7 +245,12 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
                     username=json_config['username'])
                 pipe_llm.send(response_prompt)
                 # This state is only reached at the very beginning, so let's
-                # play the opening prompt
+                # play the opening prompt. But first we trigger a redraw
+                # because the system will be unresponsive afterwards.
+                draw_image(window, json_config['screen_width'],
+                           json_config['screen_height'], images,
+                           needle_history, speak=state in dialog_states)
+
                 music.set_volume(0.025)
                 play_time = say('\n'.join(conversation), mimic, voice_file)
                 time.sleep(play_time)
@@ -266,17 +271,10 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
                                        username=json_config['username'])
                 pipe_llm.send(response_prompt)
                 state = 'think_and_say'
-            else:
+            elif 'release_r' in events:
                 # We want to go back to dialog mode, but we first need
                 # to clean the utterance queue
-                print("Press Enter within 3 seconds to return to dialog mode")
-                key_press, _, _ = select.select([sys.stdin], [], [], 3)
-                if key_press:
-                    # There was input, so we go back to dialog mode
-                    # after cleaning the queue of messages from the LLM.
-                    # We also clear the STDIN queue.
-                    _ = sys.stdin.readline().strip()
-                    state = 'clear_queue'
+                state = 'clear_queue'
         elif state == 'think_and_say':
             if 'llm_uttered' in events:
                 # The LLM is done thinking the next sentence,
@@ -303,11 +301,15 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
                 state = 'finish_talking'
         elif state == 'finish_talking':
             if 'done_speaking' in events:
+                # Go back to dialog mode
                 music.set_volume(0.5)
+                conversation = list(json_config['dialog_seed'])
                 state = 'idle_dialog'
         elif state == 'clear_queue':
             if 'llm_uttered' in events:
-                response = pipe_llm.recv()
+                # The queue is clear and I can go back to dialog mode
+                _ = pipe_llm.recv()
+                conversation = list(json_config['dialog_seed'])
                 state = 'idle_dialog'
         # Is this correct?
         events = []
@@ -344,7 +346,7 @@ def _run_main_loop_txt(pipe_llm, pipe_speech_to_text, json_config,
     dialog_states = {'idle_dialog', 'thinking', 'speaking'}
     radio_states = {'idle_radio', 'thinking_radio', 'think_and_say',
                     'slow_tongue', 'clear_queue', 'finish_talking'}
-    all_states =  dialog_states.union(radio_states)
+    all_states = dialog_states.union(radio_states)
 
     state = 'idle_dialog' 
     events = []
@@ -357,19 +359,8 @@ def _run_main_loop_txt(pipe_llm, pipe_speech_to_text, json_config,
         assert state in all_states, f'Invalid state {state}'
         old_state = state
         # First, collect all possible events.
-        # Let's start with all types of key presses.
-        for e in pygame.event.get():
-            if e.type == pygame.KEYUP:
-                if e.key == pygame.K_r:
-                    events.append('release_r')
-                    print("PRESSED ERRRRRR")
-                elif e.key == pygame.K_ESCAPE:
-                    # This is the one condition that doesn't go through the
-                    # state machine
-                    running = False
-            elif e.type == pygame.QUIT:
-                running = False
-        # Now, check whether we were talking but then finished.
+
+        # Check whether we were talking but then finished.
         # Note: this event could get lost
         if 0 < time.time() - radio_end_time < 1:
             events.append('done_speaking')
@@ -379,7 +370,6 @@ def _run_main_loop_txt(pipe_llm, pipe_speech_to_text, json_config,
 
         # Now that I'm done with all the events, it is time to compare them
         # to my current state
-
         if state == 'idle_dialog':
             text = input('[Quit/Radio/Utterance] ')
             if text.casefold().strip() == 'quit':
@@ -413,29 +403,23 @@ def _run_main_loop_txt(pipe_llm, pipe_speech_to_text, json_config,
                 music.set_volume(0.5)
                 state = 'idle_dialog'
         elif state == 'idle_radio':
-            print("Entering Radio mode. " + \
+            print("Entering Radio mode. " +
                   "Press 'R' to return to Dialog mode or 'Esc' to quit")
-            if 'release_r' in events:
-                # Change from dialog to radio mode
-                conversation = list(json_config['dialog_seed'])
-                music.set_volume(0.5)
-                state = 'idle_dialog'
-            else:
-                # I'm not doing anything, so let's generate
-                response_prompt = nlp_utils.broadcast_prompt(
-                    json_config['monologue_prompt'],
-                    conversation,
-                    context_turns=5,
-                    username=json_config['username'])
-                pipe_llm.send(response_prompt)
-                # This state is only reached at the very beginning, so let's
-                # play the opening prompt
-                music.set_volume(0.025)
-                play_time = say('\n'.join(conversation), mimic, voice_file,
-                                text_output=True)
-                time.sleep(play_time)
-                music.set_volume(0.5)
-                state = 'thinking_radio'
+            # I'm not doing anything, so let's generate
+            response_prompt = nlp_utils.broadcast_prompt(
+                json_config['monologue_prompt'],
+                conversation,
+                context_turns=5,
+                username=json_config['username'])
+            pipe_llm.send(response_prompt)
+            # This state is only reached at the very beginning, so let's
+            # play the opening prompt
+            music.set_volume(0.025)
+            play_time = say('\n'.join(conversation), mimic, voice_file,
+                            text_output=True)
+            time.sleep(play_time)
+            music.set_volume(0.5)
+            state = 'thinking_radio'
         elif state == 'thinking_radio':
             if 'llm_uttered' in events:
                 # The LLM is done thinking and it is time to talk
@@ -451,10 +435,17 @@ def _run_main_loop_txt(pipe_llm, pipe_speech_to_text, json_config,
                                        username=json_config['username'])
                 pipe_llm.send(response_prompt)
                 state = 'think_and_say'
-            elif 'release_r' in events:
-                # We want to go back to dialog mode, but we first need
+            else:
+                # We maybe want to go back to dialog mode, but we first need
                 # to clean the utterance queue
-                state = 'clear_queue'
+                print("Press Enter within 3 seconds to return to dialog mode")
+                key_press, _, _ = select.select([sys.stdin], [], [], 3)
+                if key_press:
+                    # There was input, so we first clear the STDIN queue.
+                    _ = sys.stdin.readline().strip()
+                    # We now go back to dialog mode after cleaning
+                    # the queue of messages from the LLM.
+                    state = 'clear_queue'
         elif state == 'think_and_say':
             if 'llm_uttered' in events:
                 # The LLM is done thinking the next sentence,
@@ -470,6 +461,7 @@ def _run_main_loop_txt(pipe_llm, pipe_speech_to_text, json_config,
                 # to clean the utterance queue.
                 # Note that the system is still speaking. This is technically
                 # a bug to be solved with an extra state
+                music.set_volume(0.5)
                 state = 'clear_queue'
         elif state == 'slow_tongue':
             if 'done_speaking' in events:
@@ -481,11 +473,14 @@ def _run_main_loop_txt(pipe_llm, pipe_speech_to_text, json_config,
                 state = 'finish_talking'
         elif state == 'finish_talking':
             if 'done_speaking' in events:
+                # Get ready to go back to dialog mode
                 music.set_volume(0.5)
+                conversation = list(json_config['dialog_seed'])
                 state = 'idle_dialog'
         elif state == 'clear_queue':
             if 'llm_uttered' in events:
-                response = pipe_llm.recv()
+                _ = pipe_llm.recv()
+                conversation = list(json_config['dialog_seed'])
                 state = 'idle_dialog'
         # Is this correct?
         events = []
