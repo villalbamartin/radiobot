@@ -46,9 +46,11 @@ def run_nlg_server(llm_path, comm_pipe, username="User"):
                                  stop=[f"{username}:", "I: ", "\n"],
                                  echo=True)
                 new_text = output['choices'][0]['text']
-                #if new_text.rfind('.') > 0:
-                #    new_text = new_text[:new_text.rfind('.')] + "."
+                # Remove spaces
                 new_text = new_text.split('I: ')[-1].strip()
+                # Remove emojis
+                new_text = new_text.encode('ascii', 'ignore').decode('ascii')
+                # Send the text
                 comm_pipe.send(new_text)
     except ValueError as e:
         logger.critical(e)
