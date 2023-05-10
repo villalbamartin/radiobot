@@ -21,8 +21,8 @@ with the following commands:
 ```
 python3 -m venv <path/to/virtual_env>
 source <path/to/virtual_env>/bin/activate
-pip install -r requirements.txt
-pip install --force-reinstall --no-binary :all: cffi
+pip3 install -r requirements.txt
+pip3 install --force-reinstall --no-binary :all: cffi
 ```
 
 Once this is done, you can activate this environment whenever you want to use
@@ -30,6 +30,23 @@ the software with the command:
 
 ```
 source <path/to/virtual_env>/bin/activate
+```
+
+Note, however, that `mimic3` requires Python 3.9. If you have Python 3.11 the
+best alternative is to use [Miniforge](https://github.com/conda-forge/miniforge).
+Once installed, you can create a Conda environment with the command:
+
+```
+conda create --name radiobot python=3.9
+conda activate radiobot
+pip3 install -r requirements.txt
+pip3 install --force-reinstall --no-binary :all: cffi
+```
+
+And you activate it with:
+
+```
+conda activate radiobot
 ```
 
 Usage
