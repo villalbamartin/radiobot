@@ -118,6 +118,8 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
     # Create a PyGame screen
     window = pygame.display.set_mode((json_config['screen_width'],
                                       json_config['screen_height']))
+    fullscreen = False
+    # Load all images
     images = dict()
     images['red_button'] = pygame.image.load("./images/red_button_on.png")
     images['white_button'] = pygame.image.load("./images/white_button_on.png")
@@ -166,7 +168,16 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
                 elif e.key == pygame.K_f:
                     # Switch screen mode - this doesn't need to go through the
                     # regular pipeline
-                    pygame.display.toggle_fullscreen()
+                    if fullscreen:
+                        window = pygame.display.set_mode(
+                            (json_config['screen_width'],
+                             json_config['screen_height']))
+                    else:
+                        window = pygame.display.set_mode(
+                            (json_config['screen_width'],
+                             json_config['screen_height']),
+                            pygame.FULLSCREEN | pygame.SCALED)
+                    fullscreen = not fullscreen
                 elif e.key == pygame.K_ESCAPE:
                     # This is the one condition that doesn't go through the
                     # state machine
