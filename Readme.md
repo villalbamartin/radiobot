@@ -5,6 +5,7 @@ A project that simulates a radio for taking with a Large Language Model (LLM).
 The system supports two modes, `chat` and `radio`. In `chat` mode you can talk
 to the system, while `radio` mode lets the model generate infinite text.
 
+A second script `endless_gen.py` generates infinite text.
 
 Installation
 ------------
@@ -95,6 +96,25 @@ You can play the SSML file with the command:
 mimic3 --ssml --interactive --voice 'en_US/hifi-tts_low#92' < file.ssml
 ```
 
+Using a different llama.cpp
+---------------------------
+If you want to install a specific version of `llama.cpp` while keeping
+the Python bindings, or if you need some specific compile flags
+(for instance, if you run into
+[this bug](https://github.com/ggerganov/whisper.cpp/issues/876)),
+you can do so by compiling the library as a separate project and then
+copying the `libllama.so` file.
+
+This is an example for how to compile directly with the `LLAMA_CUBLAS`
+flag:
+
+```
+git clone https://github.com/ggerganov/llama.cpp
+cd llama.cpp
+LLAMA_CUBLAS=1 make libllama.so
+# Your path may be slightly different here
+cp libllama.so <path/to/virtual_env>/lib/python3.9/site-packages/llama_cpp/libllama.so
+```
 
 Attributions
 ------------
