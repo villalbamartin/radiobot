@@ -1,4 +1,4 @@
-llama-cpp-python==0.1.41
+llama-cpp-python==0.1.50
 mycroft-messagebus-client==0.10.1
 mycroft-mimic3-tts==0.2.4
 openai-whisper==20230314
