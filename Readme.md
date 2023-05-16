@@ -34,7 +34,8 @@ source <path/to/virtual_env>/bin/activate
 ```
 
 Note, however, that `mimic3` requires Python 3.9. If you have Python 3.11 the
-best alternative is to use [Miniforge](https://github.com/conda-forge/miniforge).
+best alternative is to use [Miniforge](https://github.com/conda-forge/miniforge)
+to install an earlier version.
 Once installed, you can create a Conda environment with the command:
 
 ```
@@ -77,7 +78,9 @@ The program supports the following flags:
   * `--no-mic` disables the speech recognition. In this mode you enter text
     in the console and the system speaks back. Given that you need access to
     the console to type, this mode also activates `--no-gui`.
-  * You can use the `-llm` parameter to select a path to a specific LLM.
+  * You can use the `-llm` parameter to select a path to a specific LLM. At this
+    time the current only support the quantized 4-bit version provided by the
+    `llama.cpp` project.
 
 
 endless_gen.py
@@ -125,3 +128,7 @@ and released in the public domain.
 The [button clicking sound](https://freesound.org/people/OneKellyOrdered/sounds/624631/)
 has been created by User `OneKellyOrdered` and released under a
 Creative Commons 0 license.
+
+The prompts provided in the default config file are written according to the
+schema presented in the paper "Concept-based Persona Expansion for
+Improving Diversity of Persona-Grounded Dialogue" (Kim et al. 2023).
