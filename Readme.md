@@ -70,6 +70,7 @@ noise.
     you're done talking. The system's reply will be played over the speakers.
   * Use the R key to toggle radio mode. When in radio mode the system will
     speak constantly. Press R again to go back to chat mode.
+  * Use the F key to toggle fulscreen mode.
 
 The program supports the following flags:
 
