@@ -63,6 +63,26 @@ You need a configuration file before your first run. The provided file
 `config.json.template` is an example of such a file. You can copy it to a
 file named `config.json`.
 
+The tweakable parameters are:
+
+  * `username`: any name written here will be used in your dialog prompt.
+  * `dialog_prompt`: prompt for the dialog mode. This prompt is repeated at
+    every generation, ensuring that the conversation remains on track.
+  * `dialog_seed`: lines of dialog to jump-start the conversation. The first
+    conversation is assumed to be by the user, the second one by the AI, and so
+    on. Given that the system starts running after the first recording, the
+    dialog seed must contain an even number of utterances.
+  * `monologue_prompt`: prompt to use for the radio mode. This prompt is also
+    repeated before every utterance to keep the monologue on track.
+  * `monologue_seed`: some examples of the type of utterances that the system
+    should generate.
+  * `tts`: parameters for the text-to-speech system. If you want to change the
+    speaker you can do so here. You can listen to all available voices following
+    [this link](https://mycroftai.github.io/mimic3-voices/).
+  * `screen_width` and `screen_height`: screen size to use for the PyGame
+    window. Given that this code is designed with a retro aesthetic, it is
+    recommended to choose a low resolution and toggle fullscreen.
+
 By default the program shows a single screen with a radio and plays static
 noise. 
 
