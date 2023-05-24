@@ -58,7 +58,7 @@ def run_speech_server(comm_pipe, device=None):
     # (the GPU will be needed for the language model)
     os.environ['CUDA_VISIBLE_DEVICES'] = ""
     try:
-        model = whisper.load_model('/home/villalba/.cache/whisper/base.pt')
+        model = whisper.load_model(os.path.join('~', '.cache', 'whisper', 'base.pt'))
         logger.debug("Loaded local Whisper model")
     except RuntimeError:
         model = whisper.load_model('base')
