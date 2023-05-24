@@ -11,6 +11,7 @@ from multiprocessing import Pipe
 
 if __name__ == '__main__':
     # The very first thing is setting the logger
+    logging.basicConfig()
     logger = logging.getLogger('radiobot')
     logger.setLevel(logging.DEBUG)
 
