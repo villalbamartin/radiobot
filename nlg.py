@@ -29,7 +29,7 @@ def run_nlg_server(llm_path, comm_pipe, username="User"):
             else:
                 try:
                     output = llm(prompt, max_tokens=128,
-                                 stop=[f"{username}:", "I: ", "\n"],
+                                 stop=["</s>", "\n"],
                                  echo=True)
                 except ValueError:
                     logger.debug("Prompt too long: {} words, {} characters".format(

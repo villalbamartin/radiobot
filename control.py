@@ -263,7 +263,7 @@ def _run_main_loop_gui(pipe_llm, pipe_speech_to_text, json_config,
                            needle_history, speak=state in dialog_states)
 
                 music.set_volume(0.025)
-                play_time = say('\n'.join(conversation), mimic, voice_file)
+                play_time = say('; '.join(conversation), mimic, voice_file)
                 time.sleep(play_time)
                 music.set_volume(0.5)
                 state = 'thinking_radio'

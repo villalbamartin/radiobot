@@ -79,20 +79,19 @@ def build_reply_prompt(initial_prompt, conversation_log, context_turns=5, userna
     """
     assert len(conversation_log) % 2 == 1, \
         "The conversation should start and end with the user"
-    prompt = initial_prompt.format(username=username) + "\n"
     idx = best_idx(prompt, conversation_log, 2*context_turns, max_chars=1280)
     # The user turns are the even ones, while the odd ones are from the computer
-    user_turn = idx % 2 == 0
-    for utterance in conversation_log[idx:]:
-        if user_turn:
-            user = username
+    prompt = ""
+    user_turns = [conversation_log[::2]
+    response_turns = [conversation_log[1::2]
+    for user, resp in zip(user_turns, response_turns):
+        if prompt == "":
+            prompt = "<s>[INST] <<SYS>> " + 
+                     initial_prompt.format(username=username) + " <</SYS>> " +
+                     user + " [/INST] " + answer + " </s>"
         else:
-            user = "I"
-        new_line = f"{user}: {utterance}\n"
-        prompt += new_line
-        user_turn = not user_turn
-    prompt += "I: "
-    # print(f"Current idx: {idx}/{len(speech_log)} - {len(prompt)} chars")
+            prompt += " <s>[INST] {} [/INST] {} </s>".format(user, resp)
+    prompt += "<s>[INST] " + conversation_log[-1] + " [/INST]"
     return prompt
 
 
